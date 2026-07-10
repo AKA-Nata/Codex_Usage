@@ -1,3 +1,8 @@
 . "$PSScriptRoot\_common.ps1"
-& $VenvPython "-m" "codex_usage.cdp_monitor" "--watch" @args
-if ($LASTEXITCODE -ne 0) { throw "Monitor CDP encerrou com codigo $LASTEXITCODE." }
+
+$PythonArguments = @("-m", "codex_usage.cdp_monitor", "--watch") + @($args)
+Invoke-SystemPython -Arguments $PythonArguments
+
+if ($script:LastPythonExitCode -ne 0) {
+    throw "Monitor CDP encerrou com código $script:LastPythonExitCode."
+}

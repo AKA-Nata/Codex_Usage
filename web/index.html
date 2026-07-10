@@ -5,288 +5,177 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0b1020" />
   <title>Codex Pulse</title>
-  <style>
-    :root {
-      --bg: #090b16;
-      --surface: rgba(13, 19, 38, .74);
-      --surface-strong: rgba(20, 29, 54, .92);
-      --surface-soft: rgba(255, 255, 255, .06);
-      --text: #f5f7ff;
-      --muted: #aab4d4;
-      --accent: #62e8ff;
-      --accent-2: #a875ff;
-      --ok: #78f1aa;
-      --warn: #ffd36f;
-      --danger: #ff8ba7;
-      --border: rgba(205, 221, 255, .16);
-      --shadow: 0 24px 80px rgba(0, 0, 0, .36);
-      --radius: 26px;
-      --image-url: none;
-    }
-
-    * { box-sizing: border-box; }
-    html { background: var(--bg); }
-    body {
-      margin: 0;
-      min-width: 320px;
-      min-height: 100vh;
-      color: var(--text);
-      background: var(--bg);
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      overflow-x: hidden;
-    }
-    button, input, textarea { font: inherit; }
-    button { color: inherit; }
-
-    .bg-video, .bg-image, .bg-glow, .bg-noise {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-    }
-    .bg-video { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .3s ease; }
-    .bg-image {
-      background: linear-gradient(rgba(4, 7, 17, .58), rgba(4, 7, 17, .76)), var(--image-url);
-      background-position: center;
-      background-size: cover;
-      opacity: 0;
-      transition: opacity .3s ease;
-    }
-    body.has-image .bg-image, body.has-video .bg-video { opacity: 1; }
-    .bg-glow {
-      background:
-        radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 28rem),
-        radial-gradient(circle at 88% 25%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 32rem);
-    }
-    .bg-noise { opacity: .17; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E"); mix-blend-mode: soft-light; }
-
-    .app { position: relative; z-index: 1; width: min(1220px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0 42px; }
-    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
-    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-    .brand-mark { display: grid; place-items: center; width: 46px; height: 46px; flex: 0 0 auto; border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent); border-radius: 15px; background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 30%, transparent), color-mix(in srgb, var(--accent-2) 28%, transparent)); box-shadow: inset 0 1px rgba(255,255,255,.22), 0 10px 26px color-mix(in srgb, var(--accent) 16%, transparent); font-size: 21px; }
-    .brand-copy { min-width: 0; }
-    .eyebrow { margin: 0 0 2px; color: var(--accent); font-size: 10px; font-weight: 850; letter-spacing: .14em; text-transform: uppercase; }
-    h1 { margin: 0; font-size: clamp(18px, 4vw, 24px); letter-spacing: -.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .top-actions { display: flex; align-items: center; gap: 8px; }
-    .icon-button, .button { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface); backdrop-filter: blur(14px); cursor: pointer; transition: transform .18s ease, background .18s ease, border-color .18s ease; }
-    .icon-button { width: 42px; font-size: 18px; }
-    .button { gap: 8px; padding: 10px 14px; font-size: 13px; font-weight: 750; }
-    .button.primary { border-color: color-mix(in srgb, var(--accent) 65%, transparent); background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 92%, #fff), color-mix(in srgb, var(--accent-2) 88%, #fff)); color: #07101c; }
-    .icon-button:hover, .button:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 65%, var(--border)); }
-    .button:disabled { opacity: .55; cursor: wait; transform: none; }
-
-    .hero, .usage-card, .meta-card, .notice, .studio { border: 1px solid var(--border); background: linear-gradient(145deg, color-mix(in srgb, var(--surface-strong) 88%, transparent), var(--surface)); box-shadow: var(--shadow); backdrop-filter: blur(18px); }
-    .hero { position: relative; isolation: isolate; min-height: 226px; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 20px; padding: clamp(22px, 4vw, 38px); border-radius: var(--radius); }
-    .hero::before { content: ""; position: absolute; z-index: -1; width: 320px; height: 320px; right: -110px; top: -130px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--accent) 24%, transparent), transparent 68%); }
-    .hero-copy { align-self: center; }
-    .hero h2 { max-width: 650px; margin: 0; font-size: clamp(30px, 6vw, 54px); line-height: .98; letter-spacing: -.065em; }
-    .hero h2 em { color: var(--accent); font-style: normal; }
-    .subtitle { max-width: 560px; margin: 15px 0 0; color: var(--muted); font-size: clamp(13px, 2vw, 15px); line-height: 1.55; }
-    .hero-status { display: inline-flex; align-items: center; gap: 8px; margin-top: 20px; padding: 8px 11px; border: 1px solid var(--border); border-radius: 999px; background: rgba(0,0,0,.14); color: var(--muted); font-size: 12px; }
-    .hero-status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 14px var(--ok); }
-    .mascot-frame { position: relative; min-height: 170px; display: grid; place-items: end center; }
-    .mascot-halo { position: absolute; width: 155px; height: 155px; border: 1px dashed color-mix(in srgb, var(--accent) 44%, transparent); border-radius: 50%; animation: spin 24s linear infinite; }
-    .mascot { position: relative; width: clamp(138px, 20vw, 190px); aspect-ratio: 1; background: url("./assets/sprite-sheet.png") no-repeat; background-size: 200% 200%; image-rendering: pixelated; filter: drop-shadow(0 18px 16px rgba(0,0,0,.34)); transform: scale(var(--sprite-scale, 1)); transition: transform .25s ease, filter .25s ease; }
-    .mascot[data-sprite="explorer"] { background-position: 0% 0%; }
-    .mascot[data-sprite="wizard"] { background-position: 100% 0%; }
-    .mascot[data-sprite="mechanic"] { background-position: 0% 100%; }
-    .mascot[data-sprite="orb"] { background-position: 100% 100%; }
-    .mascot::after { content: ""; position: absolute; inset: 24% 19%; z-index: -1; background: color-mix(in srgb, var(--accent) 34%, transparent); filter: blur(30px); border-radius: 50%; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .notice { display: none; margin-top: 16px; padding: 13px 16px; border-radius: 16px; color: var(--muted); font-size: 13px; line-height: 1.45; }
-    .notice.visible { display: block; }
-    .notice.error { color: var(--danger); }
-    .notice.warn { color: var(--warn); }
-
-    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin: 30px 2px 13px; }
-    .section-head h3 { margin: 0; font-size: 15px; letter-spacing: -.02em; }
-    .section-head span { color: var(--muted); font-size: 12px; }
-    .usage-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-    .usage-card { position: relative; overflow: hidden; padding: 22px; border-radius: 22px; }
-    .usage-card::after { content: ""; position: absolute; right: -40px; bottom: -75px; width: 175px; height: 175px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--accent-2) 13%, transparent), transparent 66%); }
-    .card-label { margin: 0; color: var(--muted); font-size: 13px; font-weight: 700; }
-    .percent-row { display: flex; align-items: baseline; gap: 9px; margin-top: 14px; }
-    .percent { margin: 0; font-size: clamp(42px, 7vw, 66px); font-weight: 860; letter-spacing: -.075em; line-height: .9; }
-    .percent small { color: var(--muted); font-size: 13px; font-weight: 650; letter-spacing: 0; }
-    .progress { height: 12px; margin: 24px 0 17px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--border) 80%, transparent); border-radius: 999px; background: rgba(255,255,255,.06); }
-    .fill { height: 100%; width: 0%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--accent-2)); box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 48%, transparent); transition: width .5s cubic-bezier(.2,.8,.2,1); }
-    .countdown { position: relative; z-index: 1; margin: 0 0 5px; font-size: 15px; font-weight: 750; }
-    .exact-time { position: relative; z-index: 1; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
-    .meta-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
-    .meta-card { min-height: 92px; padding: 15px 16px; border-radius: 18px; }
-    .meta-card span { display: block; color: var(--muted); font-size: 11px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
-    .meta-card strong { display: block; margin-top: 8px; font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
-    .ok { color: var(--ok); } .warn { color: var(--warn); } .error { color: var(--danger); }
-
-    .studio-backdrop { position: fixed; z-index: 8; inset: 0; display: none; background: rgba(0,0,0,.42); backdrop-filter: blur(3px); }
-    .studio-backdrop.open { display: block; }
-    .studio { position: fixed; z-index: 9; top: 14px; right: 14px; bottom: 14px; width: min(420px, calc(100% - 28px)); display: flex; flex-direction: column; border-radius: 26px; transform: translateX(calc(100% + 28px)); transition: transform .28s cubic-bezier(.2,.8,.2,1); }
-    .studio.open { transform: translateX(0); }
-    .studio-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 20px 14px; border-bottom: 1px solid var(--border); }
-    .studio-head h2 { margin: 0; font-size: 18px; letter-spacing: -.04em; }
-    .studio-scroll { padding: 18px 20px 28px; overflow-y: auto; }
-    .studio-section { margin: 0 0 25px; }
-    .studio-section h3 { margin: 0 0 10px; font-size: 12px; color: var(--muted); letter-spacing: .09em; text-transform: uppercase; }
-    .template-grid, .sprite-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
-    .template, .sprite-option { min-height: 82px; border: 1px solid var(--border); border-radius: 15px; background: rgba(255,255,255,.035); cursor: pointer; transition: transform .16s ease, border-color .16s ease; }
-    .template:hover, .sprite-option:hover, .template.active, .sprite-option.active { border-color: var(--accent); transform: translateY(-1px); }
-    .template { position: relative; padding: 10px; overflow: hidden; text-align: left; }
-    .template b { position: relative; z-index: 1; font-size: 11px; }
-    .template::before { content: ""; position: absolute; inset: 0; background: var(--template-preview); }
-    .template.nebula { --template-preview: radial-gradient(circle at 25% 25%, #62e8ff 0 4%, transparent 5%), linear-gradient(135deg,#0a1024,#31205d); }
-    .template.arcade { --template-preview: linear-gradient(135deg,#1a0622,#ff2f92 170%); }
-    .template.glass { --template-preview: linear-gradient(135deg,#102c2d,#c3fbda); }
-    .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-    .field { display: grid; gap: 6px; margin-top: 10px; color: var(--muted); font-size: 12px; }
-    .field.full { grid-column: 1 / -1; }
-    .field input[type="text"], .field input[type="url"], .field textarea { width: 100%; border: 1px solid var(--border); border-radius: 12px; outline: none; background: rgba(0,0,0,.18); color: var(--text); padding: 10px; }
-    .field input:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent); }
-    .field textarea { min-height: 108px; resize: vertical; line-height: 1.4; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; }
-    .field input[type="color"] { width: 100%; height: 40px; border: 1px solid var(--border); border-radius: 12px; background: transparent; padding: 3px; cursor: pointer; }
-    .field input[type="range"] { width: 100%; accent-color: var(--accent); }
-    .file-control { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 12px; color: var(--muted); cursor: pointer; }
-    .file-control input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-    .hint { margin: 7px 0 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
-    .studio-footer { display: flex; gap: 9px; margin-top: 18px; }
-    .studio-footer .button { flex: 1; }
-    .hidden { display: none !important; }
-
-    @media (max-width: 760px) {
-      .app { width: min(100% - 22px, 600px); padding-top: 12px; }
-      .topbar { margin-bottom: 13px; }
-      .brand-mark { width: 39px; height: 39px; border-radius: 13px; font-size: 17px; }
-      .top-actions .button span { display: none; }
-      .top-actions .button { width: 42px; padding: 0; }
-      .hero { grid-template-columns: 1fr 114px; min-height: 196px; padding: 22px; border-radius: 22px; gap: 4px; }
-      .hero h2 { font-size: clamp(29px, 9vw, 45px); }
-      .subtitle { font-size: 12px; max-width: 300px; }
-      .mascot-frame { min-height: 142px; }
-      .mascot-halo { width: 105px; height: 105px; }
-      .mascot { width: 122px; }
-      .usage-grid, .meta-grid { grid-template-columns: 1fr; }
-      .usage-card { padding: 20px; }
-      .section-head { margin-top: 22px; }
-      .studio { top: auto; right: 0; bottom: 0; width: 100%; max-height: min(88vh, 760px); border-radius: 26px 26px 0 0; transform: translateY(110%); }
-      .studio.open { transform: translateY(0); }
-    }
-    @media (max-width: 390px) { .hero { grid-template-columns: 1fr 95px; padding: 18px; } .mascot { width: 107px; } .hero-status { font-size: 10px; } }
-    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
-  </style>
+  <link rel="stylesheet" href="./app.css" />
 </head>
 <body>
   <video id="bgVideo" class="bg-video" muted loop playsinline></video>
-  <div class="bg-image"></div><div class="bg-glow"></div><div class="bg-noise"></div>
+  <div class="bg-image"></div>
+  <div class="bg-glow"></div>
+  <div class="bg-noise"></div>
 
   <main class="app">
     <header class="topbar">
-      <div class="brand"><div class="brand-mark">◈</div><div class="brand-copy"><p class="eyebrow">Live usage monitor</p><h1 id="appTitle">Codex Pulse</h1></div></div>
-      <div class="top-actions"><button id="refreshButton" class="button primary" type="button" title="Atualizar agora">↻ <span>Atualizar</span></button><button id="openStudio" class="icon-button" type="button" aria-label="Abrir personalizacao" title="Personalizar">⚙</button></div>
+      <div class="brand">
+        <div class="brand-mark">◈</div>
+        <div class="brand-copy">
+          <p class="eyebrow">Live usage monitor</p>
+          <h1 id="appTitle">Codex Pulse</h1>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button id="refreshButton" class="button primary" type="button" title="Atualizar agora">↻ <span>Atualizar</span></button>
+        <button id="openStudio" class="icon-button" type="button" aria-label="Abrir personalização" title="Personalizar">⚙</button>
+      </div>
     </header>
 
-    <section class="hero">
-      <div class="hero-copy"><p class="eyebrow">Seu painel, seu universo</p><h2 id="heroTitle">Uso em <em>tempo real.</em></h2><p id="heroSubtitle" class="subtitle">Acompanhe seus limites e transforme este painel em uma tela totalmente sua.</p><div id="statusBadge" class="hero-status">Conectando ao monitor</div></div>
-      <div class="mascot-frame"><div class="mascot-halo"></div><div id="mascot" class="mascot" data-sprite="explorer" aria-label="Mascote pixel art"></div></div>
+    <section class="hero" data-sprite-anchor="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Seu painel, seu universo</p>
+        <h2 id="heroTitle">Uso em <em>tempo real.</em></h2>
+        <p id="heroSubtitle" class="subtitle">Os companheiros agora circulam pela interface, observam os dados e chamam atenção para o que importa.</p>
+        <div class="hero-status-row">
+          <div id="statusBadge" class="hero-status">Conectando ao monitor</div>
+          <div id="companionBadge" class="hero-status companion-status">Companheiros ativos</div>
+        </div>
+      </div>
+      <div class="hero-orbit" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
     </section>
 
     <div id="notice" class="notice" role="status"></div>
-    <div class="section-head"><h3>Capacidade disponivel</h3><span id="collectedAt">--</span></div>
-    <section class="usage-grid">
-      <article class="usage-card"><p class="card-label">Limite de uso de 5 horas</p><div class="percent-row"><p id="percent5h" class="percent">--%</p><small>restantes</small></div><div class="progress"><div id="fill5h" class="fill"></div></div><p id="countdown5h" class="countdown" data-reset-at="">Redefinicao: --</p><p id="exact5h" class="exact-time">--</p></article>
-      <article class="usage-card"><p class="card-label">Limite de uso semanal</p><div class="percent-row"><p id="percentWeekly" class="percent">--%</p><small>restantes</small></div><div class="progress"><div id="fillWeekly" class="fill"></div></div><p id="countdownWeekly" class="countdown" data-reset-at="">Redefinicao: --</p><p id="exactWeekly" class="exact-time">--</p></article>
+
+    <div class="section-head">
+      <div><p class="eyebrow">Ambiente</p><h3>Informações em tempo real</h3></div>
+      <span id="telemetryUpdatedAt">--</span>
+    </div>
+
+    <section class="ambient-grid">
+      <article class="ambient-card" data-sprite-anchor="clock">
+        <div class="ambient-icon">◷</div>
+        <div><span>Hora local</span><strong id="clockValue">--:--:--</strong><small id="dateValue">--/--/----</small></div>
+      </article>
+      <article class="ambient-card" data-sprite-anchor="idle">
+        <div class="ambient-icon">⌁</div>
+        <div><span>Sem interação</span><strong id="idleValue">0s</strong><small>atividade neste painel</small></div>
+      </article>
+      <article class="ambient-card" data-sprite-anchor="weather">
+        <div id="weatherIcon" class="ambient-icon">◌</div>
+        <div><span id="weatherLocation">Temperatura</span><strong id="temperatureValue">--°C</strong><small id="weatherCondition">Aguardando</small></div>
+      </article>
+      <article class="ambient-card machine-card" data-sprite-anchor="machine">
+        <div class="ambient-icon">⌘</div>
+        <div class="machine-copy"><span>Uso da máquina</span><strong id="machineValue">CPU --% · RAM --%</strong><small id="machineDetail">Disco --%</small></div>
+        <div class="machine-bars" aria-hidden="true">
+          <i><b id="cpuMiniBar"></b></i><i><b id="ramMiniBar"></b></i>
+        </div>
+      </article>
     </section>
-    <section class="meta-grid"><article class="meta-card"><span>Extracao</span><strong id="mode">--</strong></article><article class="meta-card"><span>Estado do limite</span><strong id="limitReached">--</strong></article><article class="meta-card"><span>Atualizacao</span><strong id="healthStatus">--</strong></article></section>
+
+    <div class="section-head">
+      <div><p class="eyebrow">Codex</p><h3>Capacidade disponível</h3></div>
+      <span id="collectedAt">--</span>
+    </div>
+
+    <section class="usage-grid">
+      <article class="usage-card" data-sprite-anchor="codex-5h">
+        <p class="card-label">Limite de uso de 5 horas</p>
+        <div class="percent-row"><p id="percent5h" class="percent">--%</p><small>restantes</small></div>
+        <div class="progress"><div id="fill5h" class="fill"></div></div>
+        <p id="countdown5h" class="countdown" data-reset-at="">Redefinição: --</p>
+        <p id="exact5h" class="exact-time">--</p>
+      </article>
+      <article class="usage-card" data-sprite-anchor="codex-weekly">
+        <p class="card-label">Limite de uso semanal</p>
+        <div class="percent-row"><p id="percentWeekly" class="percent">--%</p><small>restantes</small></div>
+        <div class="progress"><div id="fillWeekly" class="fill"></div></div>
+        <p id="countdownWeekly" class="countdown" data-reset-at="">Redefinição: --</p>
+        <p id="exactWeekly" class="exact-time">--</p>
+      </article>
+    </section>
+
+    <section class="meta-grid">
+      <article class="meta-card"><span>Extração</span><strong id="mode">--</strong></article>
+      <article class="meta-card"><span>Estado do limite</span><strong id="limitReached">--</strong></article>
+      <article class="meta-card"><span>Atualização</span><strong id="healthStatus">--</strong></article>
+    </section>
   </main>
 
+  <div id="spriteWorld" class="sprite-world" aria-live="polite"></div>
+
   <div id="studioBackdrop" class="studio-backdrop"></div>
-  <aside id="studio" class="studio" aria-label="Estudio de personalizacao" aria-hidden="true">
-    <header class="studio-head"><div><p class="eyebrow">Estudio visual</p><h2>Personalize tudo</h2></div><button id="closeStudio" class="icon-button" type="button" aria-label="Fechar personalizacao">×</button></header>
+  <aside id="studio" class="studio" aria-label="Estúdio de personalização" aria-hidden="true">
+    <header class="studio-head">
+      <div><p class="eyebrow">Estúdio visual</p><h2>Personalize tudo</h2></div>
+      <button id="closeStudio" class="icon-button" type="button" aria-label="Fechar personalização">×</button>
+    </header>
     <div class="studio-scroll">
-      <section class="studio-section"><h3>Modelos prontos</h3><div class="template-grid"><button class="template nebula active" type="button" data-template="nebula"><b>Nebula</b></button><button class="template arcade" type="button" data-template="arcade"><b>Arcade</b></button><button class="template glass" type="button" data-template="glass"><b>Glass</b></button></div></section>
-      <section class="studio-section"><h3>Textos e cores</h3><div class="field-grid"><label class="field full">Nome da tela<input id="titleInput" type="text" maxlength="32" placeholder="Codex Pulse" /></label><label class="field full">Mensagem principal<input id="heroInput" type="text" maxlength="70" placeholder="Uso em tempo real." /></label><label class="field">Cor principal<input id="accentInput" type="color" value="#62e8ff" /></label><label class="field">Cor secundaria<input id="accent2Input" type="color" value="#a875ff" /></label><label class="field full">Cor de fundo<input id="bgInput" type="color" value="#090b16" /></label></div></section>
-      <section class="studio-section"><h3>Fundo com imagem ou video</h3><div class="field-grid"><label class="field full">URL de imagem<input id="imageUrlInput" type="url" placeholder="https://.../fundo.jpg" /></label><label class="field full"><span class="file-control">Escolher imagem do dispositivo<input id="imageFileInput" type="file" accept="image/*" /></span></label><label class="field full">URL de video<input id="videoUrlInput" type="url" placeholder="https://.../loop.mp4" /></label><label class="field full"><span class="file-control">Escolher video do dispositivo<input id="videoFileInput" type="file" accept="video/*" /></span></label></div><p class="hint">Videos locais duram ate voce recarregar a pagina; URLs sao salvas no navegador.</p><button id="clearMedia" class="button" type="button">Remover fundo</button></section>
-      <section class="studio-section"><h3>Mascote</h3><div class="sprite-grid"><button class="sprite-option active" type="button" data-sprite="explorer">Explorador</button><button class="sprite-option" type="button" data-sprite="wizard">Mago</button><button class="sprite-option" type="button" data-sprite="mechanic">Mecanico</button><button class="sprite-option" type="button" data-sprite="orb">Orbital</button></div><label class="field">Tamanho do sprite<input id="spriteScaleInput" type="range" min="0.55" max="1.45" step="0.05" value="1" /></label></section>
-      <section class="studio-section"><h3>CSS extra</h3><label class="field">Cole regras CSS para ajustes livres<textarea id="customCssInput" spellcheck="false" placeholder=".hero { border-radius: 40px; }"></textarea></label><p class="hint">As regras sao aplicadas apenas neste navegador e nesta tela.</p></section>
-      <div class="studio-footer"><button id="resetDesign" class="button" type="button">Restaurar</button><button id="closeStudioBottom" class="button primary" type="button">Concluir</button></div>
+      <section class="studio-section">
+        <h3>Modelos prontos</h3>
+        <div class="template-grid">
+          <button class="template nebula active" type="button" data-template="nebula"><b>Nebula</b></button>
+          <button class="template arcade" type="button" data-template="arcade"><b>Arcade</b></button>
+          <button class="template glass" type="button" data-template="glass"><b>Glass</b></button>
+        </div>
+      </section>
+
+      <section class="studio-section">
+        <h3>Textos e cores</h3>
+        <div class="field-grid">
+          <label class="field full">Nome da tela<input id="titleInput" type="text" maxlength="32" placeholder="Codex Pulse" /></label>
+          <label class="field full">Mensagem principal<input id="heroInput" type="text" maxlength="70" placeholder="Uso em tempo real." /></label>
+          <label class="field">Cor principal<input id="accentInput" type="color" value="#62e8ff" /></label>
+          <label class="field">Cor secundária<input id="accent2Input" type="color" value="#a875ff" /></label>
+          <label class="field full">Cor de fundo<input id="bgInput" type="color" value="#090b16" /></label>
+        </div>
+      </section>
+
+      <section class="studio-section">
+        <h3>Fundo com imagem ou vídeo</h3>
+        <div class="field-grid">
+          <label class="field full">URL de imagem<input id="imageUrlInput" type="url" placeholder="https://.../fundo.jpg" /></label>
+          <label class="field full"><span class="file-control">Escolher imagem do dispositivo<input id="imageFileInput" type="file" accept="image/*" /></span></label>
+          <label class="field full">URL de vídeo<input id="videoUrlInput" type="url" placeholder="https://.../loop.mp4" /></label>
+          <label class="field full"><span class="file-control">Escolher vídeo do dispositivo<input id="videoFileInput" type="file" accept="video/*" /></span></label>
+        </div>
+        <p class="hint">Vídeos locais duram até você recarregar a página; URLs são salvas no navegador.</p>
+        <button id="clearMedia" class="button" type="button">Remover fundo</button>
+      </section>
+
+      <section class="studio-section">
+        <h3>Companheiros</h3>
+        <div class="sprite-grid">
+          <button class="sprite-option active" type="button" data-sprite="explorer">Explorador</button>
+          <button class="sprite-option" type="button" data-sprite="wizard">Mago</button>
+          <button class="sprite-option" type="button" data-sprite="mechanic">Mecânico</button>
+          <button class="sprite-option" type="button" data-sprite="orb">Orbital</button>
+        </div>
+        <div class="field-grid">
+          <label class="field">Quantidade<input id="spriteCountInput" type="range" min="1" max="3" step="1" value="2" /><output id="spriteCountOutput">2</output></label>
+          <label class="field">Tamanho<input id="spriteScaleInput" type="range" min="0.65" max="1.35" step="0.05" value="1" /></label>
+          <label class="field">Velocidade<input id="spriteSpeedInput" type="range" min="0.55" max="1.7" step="0.05" value="1" /></label>
+          <label class="field">Intervalo de fala<input id="spriteTalkInput" type="range" min="8" max="45" step="1" value="18" /><output id="spriteTalkOutput">18s</output></label>
+        </div>
+        <label class="switch-field"><input id="spriteEnabledInput" type="checkbox" checked /><span></span><b>Exibir companheiros</b></label>
+        <label class="switch-field"><input id="spriteRoamInput" type="checkbox" checked /><span></span><b>Andar livremente pela interface</b></label>
+        <label class="switch-field"><input id="spriteSmartInput" type="checkbox" checked /><span></span><b>Interagir com dados e alertas</b></label>
+        <p class="hint">Você pode arrastar cada companheiro. Clique nele para receber uma observação imediata.</p>
+      </section>
+
+      <section class="studio-section">
+        <h3>CSS extra</h3>
+        <label class="field">Cole regras CSS para ajustes livres<textarea id="customCssInput" spellcheck="false" placeholder=".hero { border-radius: 40px; }"></textarea></label>
+        <p class="hint">As regras são aplicadas apenas neste navegador e nesta tela.</p>
+      </section>
+
+      <div class="studio-footer">
+        <button id="resetDesign" class="button" type="button">Restaurar</button>
+        <button id="closeStudioBottom" class="button primary" type="button">Concluir</button>
+      </div>
     </div>
   </aside>
 
   <style id="customCss"></style>
-  <script>
-    const STORAGE_KEY = "codex-pulse-design-v1";
-    const defaults = { template: "nebula", title: "Codex Pulse", hero: "Uso em tempo real.", accent: "#62e8ff", accent2: "#a875ff", bg: "#090b16", imageUrl: "", videoUrl: "", sprite: "explorer", spriteScale: 1, customCss: "" };
-    const templates = {
-      nebula: { accent: "#62e8ff", accent2: "#a875ff", bg: "#090b16" },
-      arcade: { accent: "#ff4da6", accent2: "#ffbf4a", bg: "#19071e" },
-      glass: { accent: "#6ef3bf", accent2: "#83b7ff", bg: "#092324" }
-    };
-    const state = { usage: null, health: null, settings: { stale_after_minutes: 45, auto_refresh_seconds: 60 }, timer: null, design: loadDesign() };
-
-    function loadDesign() { try { return { ...defaults, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") }; } catch { return { ...defaults }; } }
-    function saveDesign() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.design)); }
-    function byId(id) { return document.getElementById(id); }
-    function validColor(value, fallback) { return /^#[0-9a-f]{6}$/i.test(value || "") ? value : fallback; }
-    function cleanUrl(value) { try { return value ? new URL(value, location.href).href : ""; } catch { return ""; } }
-
-    function applyDesign() {
-      const d = state.design;
-      const root = document.documentElement.style;
-      root.setProperty("--accent", validColor(d.accent, defaults.accent));
-      root.setProperty("--accent-2", validColor(d.accent2, defaults.accent2));
-      root.setProperty("--bg", validColor(d.bg, defaults.bg));
-      root.setProperty("--image-url", d.imageUrl ? `url("${d.imageUrl.replaceAll('"', '%22')}")` : "none");
-      byId("appTitle").textContent = d.title || defaults.title;
-      byId("heroTitle").innerHTML = `${escapeHtml(d.hero || defaults.hero).replace(/(tempo real|real)/i, "<em>$1</em>")}`;
-      byId("mascot").dataset.sprite = d.sprite;
-      byId("mascot").style.setProperty("--sprite-scale", d.spriteScale);
-      byId("customCss").textContent = d.customCss || "";
-      document.body.classList.toggle("has-image", Boolean(d.imageUrl));
-      const video = byId("bgVideo");
-      if (d.videoUrl && video.src !== d.videoUrl) { video.src = d.videoUrl; video.play().catch(() => {}); }
-      if (!d.videoUrl) { video.removeAttribute("src"); video.load(); }
-      document.body.classList.toggle("has-video", Boolean(d.videoUrl));
-      syncControls();
-    }
-
-    function escapeHtml(value) { const element = document.createElement("div"); element.textContent = value; return element.innerHTML; }
-    function syncControls() {
-      const d = state.design;
-      byId("titleInput").value = d.title; byId("heroInput").value = d.hero;
-      byId("accentInput").value = validColor(d.accent, defaults.accent); byId("accent2Input").value = validColor(d.accent2, defaults.accent2); byId("bgInput").value = validColor(d.bg, defaults.bg);
-      byId("imageUrlInput").value = d.imageUrl; byId("videoUrlInput").value = d.videoUrl; byId("spriteScaleInput").value = d.spriteScale; byId("customCssInput").value = d.customCss;
-      document.querySelectorAll("[data-template]").forEach(button => button.classList.toggle("active", button.dataset.template === d.template));
-      document.querySelectorAll("[data-sprite]").forEach(button => { if (button.classList.contains("sprite-option")) button.classList.toggle("active", button.dataset.sprite === d.sprite); });
-    }
-    function updateDesign(values) { Object.assign(state.design, values); saveDesign(); applyDesign(); }
-    function setStudio(open) { byId("studio").classList.toggle("open", open); byId("studioBackdrop").classList.toggle("open", open); byId("studio").setAttribute("aria-hidden", String(!open)); }
-    function safePercent(value) { const number = Number(value); return Number.isFinite(number) ? Math.max(0, Math.min(100, Math.round(number))) : null; }
-    function parseDate(value) { const date = value ? new Date(value) : null; return date && !Number.isNaN(date.getTime()) ? date : null; }
-    function countdown(date) { if (!date) return "Redefinicao: --"; let seconds = Math.max(0, Math.floor((date - Date.now()) / 1000)); if (!seconds) return "Redefinicao prevista para agora"; const days = Math.floor(seconds / 86400); seconds %= 86400; const hours = Math.floor(seconds / 3600); seconds %= 3600; const minutes = Math.floor(seconds / 60); const parts = []; if (days) parts.push(`${days}d`); if (hours || days) parts.push(`${hours}h`); parts.push(`${minutes}min`); return `Redefinicao em ${parts.join(" ")}`; }
-    function exactDate(date) { return date ? date.toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "Horario exato indisponivel"; }
-    function renderCard(kind, data) { const suffix = kind === "5h" ? "5h" : "Weekly"; const percent = safePercent(data?.remaining_percent); const reset = parseDate(data?.reset_at); byId(`percent${suffix}`).textContent = `${percent ?? "--"}%`; byId(`fill${suffix}`).style.width = `${percent ?? 0}%`; byId(`countdown${suffix}`).dataset.resetAt = data?.reset_at || ""; byId(`countdown${suffix}`).textContent = countdown(reset); byId(`exact${suffix}`).textContent = exactDate(reset); }
-    function setNotice(message, level = "") { const element = byId("notice"); element.textContent = message || ""; element.className = `notice${message ? " visible" : ""}${level ? ` ${level}` : ""}`; }
-    function renderStatus() {
-      const usage = state.usage || {}, health = state.health || {}; renderCard("5h", usage.resets?.limite_5h); renderCard("weekly", usage.resets?.limite_semanal);
-      byId("collectedAt").textContent = usage.collected_at ? `Atualizado ${new Date(usage.collected_at).toLocaleString("pt-BR")}` : "Ainda sem dados";
-      byId("mode").textContent = usage.extraction_mode || "--"; byId("limitReached").textContent = usage.limit_reached === true ? "Atingido" : usage.limit_reached === false ? "Disponivel" : "Nao informado"; byId("healthStatus").textContent = health.status || "Aguardando";
-      const collected = parseDate(usage.collected_at), stale = !collected || Date.now() - collected > Number(state.settings.stale_after_minutes || 45) * 60000;
-      const badge = byId("statusBadge");
-      if (health.status === "ok" && !stale) { badge.textContent = "Monitor online"; setNotice(""); }
-      else if (health.status === "ok") { badge.textContent = "Dados anteriores"; setNotice("Os dados passaram do intervalo esperado. Atualize quando quiser.", "warn"); }
-      else { badge.textContent = "Aguardando monitor"; setNotice(health.message || "Inicie o Edge CDP e mantenha a aba de Analytics aberta.", health.status ? "warn" : ""); }
-    }
-    async function loadStatus() { const response = await fetch(`/api/status?t=${Date.now()}`, { cache: "no-store" }); if (!response.ok) throw new Error(`HTTP ${response.status}`); const payload = await response.json(); state.usage = payload.usage || {}; state.health = payload.health || {}; state.settings = payload.settings || state.settings; renderStatus(); scheduleStatusRefresh(); }
-    function scheduleStatusRefresh() { clearInterval(state.timer); state.timer = setInterval(() => loadStatus().catch(() => {}), Math.max(15, Number(state.settings.auto_refresh_seconds || 60)) * 1000); }
-    async function refreshNow() { const button = byId("refreshButton"); button.disabled = true; button.textContent = "Coletando..."; setNotice("O monitor esta buscando os dados na aba aberta."); try { const response = await fetch("/api/refresh", { method: "POST" }); const payload = await response.json(); state.usage = payload.usage || state.usage; state.health = payload.health || state.health; renderStatus(); if (!response.ok) setNotice(payload.message || payload.error || "A coleta nao foi concluida.", "warn"); } catch (error) { setNotice(`Falha ao atualizar: ${error.message}`, "error"); } finally { button.disabled = false; button.innerHTML = "↻ <span>Atualizar</span>"; } }
-
-    byId("openStudio").addEventListener("click", () => setStudio(true)); byId("closeStudio").addEventListener("click", () => setStudio(false)); byId("closeStudioBottom").addEventListener("click", () => setStudio(false)); byId("studioBackdrop").addEventListener("click", () => setStudio(false)); byId("refreshButton").addEventListener("click", refreshNow);
-    document.querySelectorAll("[data-template]").forEach(button => button.addEventListener("click", () => updateDesign({ template: button.dataset.template, ...templates[button.dataset.template] })));
-    document.querySelectorAll(".sprite-option").forEach(button => button.addEventListener("click", () => updateDesign({ sprite: button.dataset.sprite })));
-    [["titleInput", "title"], ["heroInput", "hero"], ["accentInput", "accent"], ["accent2Input", "accent2"], ["bgInput", "bg"], ["spriteScaleInput", "spriteScale"], ["customCssInput", "customCss"]].forEach(([id, key]) => byId(id).addEventListener("input", event => updateDesign({ [key]: key === "spriteScale" ? Number(event.target.value) : event.target.value })));
-    byId("imageUrlInput").addEventListener("change", event => updateDesign({ imageUrl: cleanUrl(event.target.value), videoUrl: "" })); byId("videoUrlInput").addEventListener("change", event => updateDesign({ videoUrl: cleanUrl(event.target.value), imageUrl: "" }));
-    byId("imageFileInput").addEventListener("change", event => { const file = event.target.files?.[0]; if (file) updateDesign({ imageUrl: URL.createObjectURL(file), videoUrl: "" }); }); byId("videoFileInput").addEventListener("change", event => { const file = event.target.files?.[0]; if (file) updateDesign({ videoUrl: URL.createObjectURL(file), imageUrl: "" }); });
-    byId("clearMedia").addEventListener("click", () => updateDesign({ imageUrl: "", videoUrl: "" })); byId("resetDesign").addEventListener("click", () => { state.design = { ...defaults }; saveDesign(); applyDesign(); });
-    setInterval(() => ["countdown5h", "countdownWeekly"].forEach(id => { const element = byId(id); element.textContent = countdown(parseDate(element.dataset.resetAt)); }), 1000);
-    applyDesign(); loadStatus().catch(error => { byId("statusBadge").textContent = "Painel offline"; setNotice(`Nao foi possivel ler os dados locais: ${error.message}`, "error"); });
-  </script>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>

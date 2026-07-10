@@ -1,2 +1,8 @@
+# Manifesto informativo de dependências.
+#
+# O projeto NÃO cria VENV e NÃO executa pip.
+# Estas bibliotecas devem estar previamente instaladas no Python da máquina
+# escolhido pelos scripts PowerShell.
 tzdata>=2025.2
 websocket-client>=1.8,<2
+psutil>=6.1,<8

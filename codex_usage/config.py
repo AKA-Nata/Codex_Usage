@@ -37,6 +37,15 @@ def load_config(path: Path | None = None) -> dict[str, Any]:
     if not isinstance(cdp_port, int) or not (1 <= cdp_port <= 65535):
         raise ConfigError("cdp_monitor.port deve estar entre 1 e 65535")
 
+    weather = config.get("weather") or {}
+    if weather.get("enabled", False):
+        latitude = weather.get("latitude")
+        longitude = weather.get("longitude")
+        if not isinstance(latitude, (int, float)) or not (-90 <= latitude <= 90):
+            raise ConfigError("weather.latitude deve estar entre -90 e 90")
+        if not isinstance(longitude, (int, float)) or not (-180 <= longitude <= 180):
+            raise ConfigError("weather.longitude deve estar entre -180 e 180")
+
     return config
 
 

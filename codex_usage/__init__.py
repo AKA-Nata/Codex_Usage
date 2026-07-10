@@ -1,3 +1,3 @@
 """Coletor local de resets de uso do Codex."""
 
-__version__ = "2.0.0"
+__version__ = "4.0.1"

@@ -12,13 +12,14 @@ from urllib.parse import urlparse
 
 from codex_usage.config import BASE_DIR, load_config, resolve_path
 from codex_usage.storage import read_json
+from codex_usage.telemetry import build_telemetry
 
 WEB_DIR = BASE_DIR / "web"
 CDP_MONITOR_COMMAND = [sys.executable, "-m", "codex_usage.cdp_monitor"]
 
 
 class DashboardHandler(SimpleHTTPRequestHandler):
-    server_version = "CodexUsageDashboard/3.0"
+    server_version = "CodexUsageDashboard/4.0.1"
 
     def __init__(self, *args, directory=None, **kwargs):
         super().__init__(*args, directory=str(WEB_DIR), **kwargs)
@@ -59,6 +60,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 "settings": {
                     "stale_after_minutes": int(self.app_config.get("stale_after_minutes", 45)),
                     "auto_refresh_seconds": int(dashboard.get("auto_refresh_seconds", 60)),
+                    "telemetry_refresh_seconds": int(dashboard.get("telemetry_refresh_seconds", 5)),
                 },
             })
             return
@@ -67,6 +69,9 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             return
         if self.path.startswith("/api/health"):
             self._send_json(read_json(resolve_path(self.app_config, "health_json", "data/collector-health.json"), {}))
+            return
+        if self.path.startswith("/api/telemetry"):
+            self._send_json(build_telemetry(self.app_config))
             return
         super().do_GET()
 

@@ -1,22 +1,54 @@
 # Arquitetura
 
-O projeto tem um unico fluxo de coleta:
-
-```text
-Edge dedicado com CDP -> codex_usage.cdp_monitor -> JSON local -> painel HTTP
-```
-
 ## Componentes
 
-- `scripts/start_cdp_edge.ps1`: inicia o Edge com perfil separado e CDP em
-  `127.0.0.1`.
-- `codex_usage/cdp_monitor.py`: encontra a aba de Analytics, observa respostas
-  de rede e usa o DOM como fallback.
-- `codex_usage/parsers.py`: normaliza os limites de 5 horas e semanal.
-- `codex_usage/storage.py`: grava JSON de forma atomica.
-- `dashboard_server.py`: entrega o painel e as rotas locais `GET /api/status`,
-  `GET /api/usage`, `GET /api/health` e `POST /api/refresh`.
-- `web/index.html`: exibe os dados e solicita atualizacao manual.
+### Coletor CDP
 
-O monitor preserva o ultimo resultado valido quando uma tentativa falha e grava
-o estado da tentativa em `data/collector-health.json`.
+`codex_usage/cdp_monitor.py` conecta-se somente à aba de Analytics do Edge
+isolado. O resultado válido é gravado atomicamente em `data/codex-usage.json`.
+
+### Dashboard local
+
+`dashboard_server.py` serve os arquivos de `web/` e expõe APIs locais em
+loopback. O servidor também agrega telemetria leve por meio de
+`codex_usage/telemetry.py`.
+
+### Telemetria
+
+`codex_usage/telemetry.py` fornece:
+
+- relógio no fuso configurado;
+- CPU, memória, disco e bateria via `psutil`;
+- tempo ocioso do Windows por `GetLastInputInfo`;
+- temperatura atual por serviço meteorológico configurado, com cache.
+
+A interface usa `GET /api/telemetry` e atualiza os dados sem executar uma coleta
+nova do Codex.
+
+### Interface
+
+`web/app.js` controla cards, personalização, cronômetros e telemetria.
+`web/sprite-engine.js` é um motor isolado para os companheiros pixel art.
+
+O motor de sprites:
+
+1. cria de um a três personagens;
+2. mantém coordenadas, destino e estado de cada personagem;
+3. usa `requestAnimationFrame` para movimentação;
+4. localiza cards por `data-sprite-anchor`;
+5. escolhe interações por prioridade e cooldown;
+6. permite drag por Pointer Events;
+7. respeita `prefers-reduced-motion`.
+
+## Fluxo de dados
+
+```text
+Edge Analytics -> CDP monitor -> codex-usage.json -> /api/status -> interface
+Máquina/clima -> telemetry.py -> /api/telemetry -> interface -> sprite engine
+```
+
+## Persistência
+
+- Uso e saúde: arquivos JSON locais.
+- Personalização dos sprites e tema: `localStorage` do navegador.
+- Clima: cache em memória do processo do dashboard.

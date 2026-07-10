@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "codex_usage_url": "https://chatgpt.com/codex/cloud/settings/analytics?locale=pt-BR",
   "output_json": "data/codex-usage.json",
   "health_json": "data/collector-health.json",
@@ -18,6 +18,15 @@
     "host": "127.0.0.1",
     "port": 8088,
     "auto_refresh_seconds": 60,
-    "allow_remote": false
+    "allow_remote": false,
+    "telemetry_refresh_seconds": 5
+  },
+  "weather": {
+    "enabled": true,
+    "location_label": "Blumenau",
+    "latitude": -26.9194,
+    "longitude": -49.0661,
+    "cache_seconds": 600,
+    "timeout_seconds": 5
   }
 }

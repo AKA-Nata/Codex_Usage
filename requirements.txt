@@ -1,3 +1,2 @@
-playwright>=1.45,<2
 tzdata>=2025.2
 websocket-client>=1.8,<2

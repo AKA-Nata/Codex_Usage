@@ -15,26 +15,27 @@ class ConfigError(ValueError):
 def load_config(path: Path | None = None) -> dict[str, Any]:
     config_path = path or DEFAULT_CONFIG_PATH
     if not config_path.exists():
-        raise ConfigError(f"Arquivo de configuração não encontrado: {config_path}")
+        raise ConfigError(f"Arquivo de configuracao nao encontrado: {config_path}")
 
     try:
         config = json.loads(config_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        raise ConfigError(f"JSON inválido em {config_path}: {exc}") from exc
+        raise ConfigError(f"JSON invalido em {config_path}: {exc}") from exc
 
     required = ["codex_usage_url", "timezone", "output_json", "health_json"]
     missing = [key for key in required if not config.get(key)]
     if missing:
-        raise ConfigError(f"Campos obrigatórios ausentes no config.json: {', '.join(missing)}")
-
-    endpoints = config.get("network_endpoints")
-    if not isinstance(endpoints, list) or not endpoints:
-        raise ConfigError("network_endpoints deve ser uma lista não vazia")
+        raise ConfigError(f"Campos obrigatorios ausentes no config.json: {', '.join(missing)}")
 
     dashboard = config.get("dashboard") or {}
     port = dashboard.get("port", 8088)
     if not isinstance(port, int) or not (1 <= port <= 65535):
         raise ConfigError("dashboard.port deve estar entre 1 e 65535")
+
+    cdp = config.get("cdp_monitor") or {}
+    cdp_port = cdp.get("port", 9222)
+    if not isinstance(cdp_port, int) or not (1 <= cdp_port <= 65535):
+        raise ConfigError("cdp_monitor.port deve estar entre 1 e 65535")
 
     return config
 

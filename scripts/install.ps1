@@ -10,12 +10,12 @@ function Invoke-BootstrapPython {
     } elseif (Get-Command python -ErrorAction SilentlyContinue) {
         & python @Arguments
     } else {
-        throw "Python 3 não encontrado no PATH. Instale Python 3.11 ou superior."
+        throw "Python 3 nao encontrado no PATH. Instale Python 3.11 ou superior."
     }
     if ($LASTEXITCODE -ne 0) { throw "Falha ao executar Python." }
 }
 
-Invoke-BootstrapPython -Arguments @("-c", "import sys; assert sys.version_info >= (3, 11), 'Python 3.11+ obrigatório'; print(sys.version)")
+Invoke-BootstrapPython -Arguments @("-c", "import sys; assert sys.version_info >= (3, 11), 'Python 3.11+ obrigatorio'; print(sys.version)")
 
 if (-not (Test-Path ".venv")) {
     Invoke-BootstrapPython -Arguments @("-m", "venv", ".venv")
@@ -24,12 +24,9 @@ if (-not (Test-Path ".venv")) {
 $Python = ".\.venv\Scripts\python.exe"
 & $Python -m pip install --upgrade pip
 & $Python -m pip install -r requirements.txt
-
-# Edge instalado é a opção principal; Chromium é instalado apenas como fallback.
-& $Python -m playwright install chromium
-
 & $Python -m unittest discover -s tests -v
+if ($LASTEXITCODE -ne 0) { throw "Testes falharam." }
 
 Write-Host ""
-Write-Host "Instalação concluída." -ForegroundColor Green
-Write-Host "Próximo passo: .\scripts\first_login.ps1"
+Write-Host "Instalacao concluida." -ForegroundColor Green
+Write-Host "Proximo passo: .\scripts\start_cdp_edge.ps1"

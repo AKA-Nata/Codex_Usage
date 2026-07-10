@@ -4,33 +4,29 @@ Write-Host "Projeto: $ProjectRoot"
 Write-Host "Python: $VenvPython"
 & $VenvPython --version
 
-$Edge = Get-Command "msedge.exe" -ErrorAction SilentlyContinue
+$Edge = @(
+    (Get-Command "msedge.exe" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
+    "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+    "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe"
+) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
 if ($Edge) {
-    Write-Host "Edge: $($Edge.Source)"
+    Write-Host "Edge: $Edge"
 } else {
-    Write-Host "Edge não localizado no PATH; o Playwright ainda pode localizar o canal msedge." -ForegroundColor Yellow
+    Write-Host "Edge nao localizado." -ForegroundColor Yellow
 }
 
 Write-Host ""
-Write-Host "Saúde da coleta:"
+Write-Host "Saude da coleta:"
 if (Test-Path ".\data\collector-health.json") {
     Get-Content ".\data\collector-health.json"
 } else {
-    Write-Host "Arquivo ainda não criado."
+    Write-Host "Arquivo ainda nao criado."
 }
 
 Write-Host ""
-Write-Host "Últimos logs:"
+Write-Host "Ultimos logs:"
 if (Test-Path ".\logs\collector.log") {
     Get-Content ".\logs\collector.log" -Tail 25
 } else {
-    Write-Host "Nenhum log disponível."
-}
-
-Write-Host ""
-$Task = Get-ScheduledTask -TaskName "Codex Usage Reset RPA" -ErrorAction SilentlyContinue
-if ($Task) {
-    Write-Host "Tarefa agendada: $($Task.State)"
-} else {
-    Write-Host "Tarefa agendada: não instalada"
+    Write-Host "Nenhum log disponivel."
 }

@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>Codex Usage Reset</title>
+  <style>
+    :root {
+      --bg: #090909;
+      --panel: #171717;
+      --panel-2: #202020;
+      --border: #323232;
+      --text: #f3f4f6;
+      --muted: #a3a3a3;
+      --track: #e5e7eb;
+      --accent: #f87171;
+      --ok: #86efac;
+      --warn: #fde68a;
+      --error: #fda4af;
+      --button: #f5f5f5;
+      --button-text: #171717;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top right, rgba(248, 113, 113, .08), transparent 34rem),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 28px;
+    }
+
+    button { font: inherit; }
+
+    .shell {
+      width: min(980px, 100%);
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(22px, 3vw, 30px);
+      letter-spacing: -.03em;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .badge {
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--border);
+      background: rgba(23, 23, 23, .8);
+      border-radius: 999px;
+      padding: 8px 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .button {
+      border: 0;
+      border-radius: 11px;
+      background: var(--button);
+      color: var(--button-text);
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .15s ease, transform .15s ease;
+    }
+
+    .button:hover { opacity: .9; }
+    .button:active { transform: translateY(1px); }
+    .button:disabled { opacity: .45; cursor: wait; }
+
+    .notice {
+      display: none;
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--panel);
+      padding: 13px 15px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .notice.visible { display: block; }
+    .notice.error { color: var(--error); }
+    .notice.warn { color: var(--warn); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: linear-gradient(180deg, var(--panel-2), var(--panel));
+      padding: 22px;
+      box-shadow: 0 22px 45px -38px rgba(0, 0, 0, .95);
+    }
+
+    .card-label {
+      margin: 0 0 9px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .percent {
+      margin: 0;
+      font-size: clamp(30px, 6vw, 44px);
+      font-weight: 750;
+      letter-spacing: -.04em;
+    }
+
+    .percent small {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0;
+    }
+
+    .track {
+      height: 11px;
+      width: 100%;
+      margin: 19px 0 16px;
+      border-radius: 999px;
+      background: var(--track);
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: var(--accent);
+      transition: width .3s ease;
+    }
+
+    .countdown {
+      margin: 0 0 4px;
+      font-size: 16px;
+      font-weight: 650;
+    }
+
+    .exact-time {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .meta {
+      margin-top: 16px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(23, 23, 23, .72);
+      padding: 15px 17px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .meta strong {
+      display: block;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 650;
+      margin-top: 3px;
+      overflow-wrap: anywhere;
+    }
+
+    .ok { color: var(--ok); }
+    .warn { color: var(--warn); }
+    .error { color: var(--error); }
+
+    @media (max-width: 720px) {
+      body { padding: 18px; }
+      .header { flex-direction: column; }
+      .actions { justify-content: flex-start; }
+      .grid { grid-template-columns: 1fr; }
+      .meta { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <div>
+        <h1>Codex Usage Reset</h1>
+        <p class="subtitle">Percentual restante e tempo até a redefinição dos limites.</p>
+      </div>
+      <div class="actions">
+        <div id="statusBadge" class="badge">Carregando...</div>
+        <button id="refreshButton" class="button" type="button">Atualizar agora</button>
+      </div>
+    </header>
+
+    <div id="notice" class="notice"></div>
+
+    <section class="grid">
+      <article class="card">
+        <p class="card-label">Limite de uso de 5 horas</p>
+        <p id="percent5h" class="percent">--% <small>restantes</small></p>
+        <div class="track"><div id="fill5h" class="fill"></div></div>
+        <p id="countdown5h" class="countdown">Redefinição: --</p>
+        <p id="exact5h" class="exact-time">--</p>
+      </article>
+
+      <article class="card">
+        <p class="card-label">Limite de uso semanal</p>
+        <p id="percentWeekly" class="percent">--% <small>restantes</small></p>
+        <div class="track"><div id="fillWeekly" class="fill"></div></div>
+        <p id="countdownWeekly" class="countdown">Redefinição: --</p>
+        <p id="exactWeekly" class="exact-time">--</p>
+      </article>
+    </section>
+
+    <section class="meta">
+      <div>Última coleta<strong id="collectedAt">--</strong></div>
+      <div>Modo de extração<strong id="mode">--</strong></div>
+      <div>Estado do limite<strong id="limitReached">--</strong></div>
+    </section>
+  </main>
+
+  <script>
+    const state = { usage: null, health: null, settings: { stale_after_minutes: 45, auto_refresh_seconds: 60 }, autoTimer: null };
+
+    function safePercent(value) {
+      const number = Number(value);
+      return Number.isFinite(number) ? Math.max(0, Math.min(100, Math.round(number))) : null;
+    }
+
+    function parseDate(value) {
+      if (!value) return null;
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    function formatExact(date) {
+      if (!date) return "Horário exato indisponível";
+      return date.toLocaleString("pt-BR", {
+        weekday: "short",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+    }
+
+    function formatCountdown(date) {
+      if (!date) return "Redefinição: --";
+      let seconds = Math.max(0, Math.floor((date.getTime() - Date.now()) / 1000));
+      if (seconds <= 0) return "Redefinição prevista para agora";
+      const days = Math.floor(seconds / 86400);
+      seconds %= 86400;
+      const hours = Math.floor(seconds / 3600);
+      seconds %= 3600;
+      const minutes = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      const parts = [];
+      if (days) parts.push(`${days}d`);
+      if (hours || days) parts.push(`${hours}h`);
+      parts.push(`${minutes}min`);
+      parts.push(`${secs}s`);
+      return `Redefinição em ${parts.join(" ")}`;
+    }
+
+    function renderCard(kind, data) {
+      const suffix = kind === "5h" ? "5h" : "Weekly";
+      const percentElement = document.getElementById(`percent${suffix}`);
+      const fillElement = document.getElementById(`fill${suffix}`);
+      const countdownElement = document.getElementById(`countdown${suffix}`);
+      const exactElement = document.getElementById(`exact${suffix}`);
+      const percent = safePercent(data?.remaining_percent);
+      const resetAt = parseDate(data?.reset_at);
+
+      percentElement.innerHTML = `${percent ?? "--"}% <small>restantes</small>`;
+      fillElement.style.width = `${percent ?? 0}%`;
+      countdownElement.textContent = formatCountdown(resetAt);
+      exactElement.textContent = formatExact(resetAt);
+      countdownElement.dataset.resetAt = data?.reset_at || "";
+    }
+
+    function setNotice(message, level = "") {
+      const notice = document.getElementById("notice");
+      notice.textContent = message || "";
+      notice.className = `notice${message ? " visible" : ""}${level ? ` ${level}` : ""}`;
+    }
+
+    function renderStatus() {
+      const usage = state.usage || {};
+      const health = state.health || {};
+      const badge = document.getElementById("statusBadge");
+
+      renderCard("5h", usage?.resets?.limite_5h);
+      renderCard("weekly", usage?.resets?.limite_semanal);
+
+      document.getElementById("collectedAt").textContent = usage.collected_at
+        ? new Date(usage.collected_at).toLocaleString("pt-BR")
+        : "--";
+      document.getElementById("mode").textContent = usage.extraction_mode || "--";
+      document.getElementById("limitReached").textContent = usage.limit_reached === true
+        ? "Atingido"
+        : usage.limit_reached === false
+          ? "Disponível"
+          : "Não informado";
+
+      const collected = parseDate(usage.collected_at);
+      const staleLimitMs = Number(state.settings?.stale_after_minutes || 45) * 60_000;
+      const isStale = collected ? (Date.now() - collected.getTime()) > staleLimitMs : true;
+
+      if (usage.status === "empty" && ["never_run", "login_completed", undefined, null].includes(health.status)) {
+        badge.innerHTML = '<span class="warn">Aguardando coleta</span>';
+        setNotice("Execute a primeira coleta para preencher o painel.", "warn");
+      } else if (health.status === "ok" && !isStale) {
+        badge.innerHTML = '<span class="ok">Coleta normal</span>';
+        setNotice(usage.network_warnings?.join(" | ") || "", usage.network_warnings ? "warn" : "");
+      } else if (health.status === "ok" && isStale) {
+        badge.innerHTML = '<span class="warn">Dados desatualizados</span>';
+        setNotice("A última coleta válida ultrapassou o limite configurado de atualização.", "warn");
+      } else if (health.status === "auth_required") {
+        badge.innerHTML = '<span class="error">Login necessário</span>';
+        setNotice(health.message || "Execute o primeiro login do RPA.", "error");
+      } else if (health.status && health.status !== "login_completed") {
+        badge.innerHTML = '<span class="warn">Dados anteriores</span>';
+        setNotice(health.message || "A última coleta falhou; os dados anteriores foram preservados.", "warn");
+      } else {
+        badge.textContent = "Status indisponível";
+        setNotice("");
+      }
+    }
+
+    async function loadStatus() {
+      const response = await fetch(`/api/status?t=${Date.now()}`, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      state.usage = payload.usage || {};
+      state.health = payload.health || {};
+      state.settings = payload.settings || state.settings;
+      renderStatus();
+      scheduleAutoRefresh();
+    }
+
+
+    function scheduleAutoRefresh() {
+      const seconds = Math.max(15, Number(state.settings?.auto_refresh_seconds || 60));
+      if (state.autoTimer) clearInterval(state.autoTimer);
+      state.autoTimer = setInterval(() => loadStatus().catch(() => {}), seconds * 1000);
+    }
+
+    async function refreshNow() {
+      const button = document.getElementById("refreshButton");
+      button.disabled = true;
+      button.textContent = "Coletando...";
+      setNotice("Executando uma nova coleta em segundo plano...");
+      try {
+        const response = await fetch("/api/refresh", { method: "POST" });
+        const payload = await response.json();
+        state.usage = payload.usage || state.usage;
+        state.health = payload.health || state.health;
+        renderStatus();
+        if (!response.ok) {
+          setNotice(payload.message || payload.error || "A coleta não foi concluída.", "warn");
+        }
+      } catch (error) {
+        setNotice(`Falha ao iniciar a coleta: ${error.message}`, "error");
+      } finally {
+        button.disabled = false;
+        button.textContent = "Atualizar agora";
+      }
+    }
+
+    function tickCountdowns() {
+      for (const id of ["countdown5h", "countdownWeekly"]) {
+        const element = document.getElementById(id);
+        const date = parseDate(element.dataset.resetAt);
+        element.textContent = formatCountdown(date);
+      }
+    }
+
+    document.getElementById("refreshButton").addEventListener("click", refreshNow);
+
+    loadStatus().catch(error => {
+      document.getElementById("statusBadge").innerHTML = '<span class="error">Painel offline</span>';
+      setNotice(`Não foi possível ler os dados locais: ${error.message}`, "error");
+    });
+
+    setInterval(tickCountdowns, 1_000);
+  </script>
+</body>
+</html>

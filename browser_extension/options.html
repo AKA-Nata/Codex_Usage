@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head><meta charset="utf-8"><title>Codex Usage Local Monitor</title><style>body{font:14px system-ui;max-width:650px;margin:32px auto}label{display:block;margin-top:16px;font-weight:600}input{box-sizing:border-box;width:100%;padding:8px;margin-top:4px}button{margin-top:20px;padding:8px 14px}#status{margin-left:10px}</style></head>
+  <body>
+    <h1>Codex Usage Local Monitor</h1>
+    <p>A extensao somente observa a aba de Analytics autenticada. Nenhum cookie ou token da sua conta e copiado.</p>
+    <label>Atualizar a aba a cada (minutos)<input id="refreshMinutes" type="number" min="5" step="1"></label>
+    <label>URL da ponte local<input id="bridgeUrl" type="url"></label>
+    <label>Token da ponte local<input id="bridgeToken" type="password" autocomplete="off"></label>
+    <button id="save">Salvar</button><span id="status"></span>
+    <script src="options.js"></script>
+  </body>
+</html>

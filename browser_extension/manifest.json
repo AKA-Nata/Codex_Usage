@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Codex Usage Local Monitor",
+  "version": "1.0.0",
+  "description": "Observa os limites do Codex na aba autenticada e envia somente dados normalizados ao painel local.",
+  "permissions": ["alarms", "scripting", "storage", "tabs"],
+  "host_permissions": ["https://chatgpt.com/*", "http://127.0.0.1:8088/*"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "content_scripts": [{
+    "matches": ["https://chatgpt.com/*"],
+    "js": ["content.js"],
+    "run_at": "document_start"
+  }],
+  "options_page": "options.html",
+  "action": { "default_title": "Codex Usage Local Monitor" }
+}

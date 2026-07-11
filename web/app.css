@@ -136,29 +136,171 @@ h1 { margin: 0; font-size: clamp(18px, 4vw, 24px); letter-spacing: -.04em; white
 .meta-card strong { display: block; margin-top: 8px; font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
 .ok { color: var(--ok); } .warn { color: var(--warn); } .error { color: var(--danger); }
 
-.sprite-world { position: fixed; z-index: 6; inset: 0; overflow: hidden; pointer-events: none; }
-.sprite-companion { --companion-size: 112px; position: absolute; left: 0; top: 0; width: var(--companion-size); height: var(--companion-size); padding: 0; border: 0; background: transparent; pointer-events: auto; cursor: grab; touch-action: none; user-select: none; will-change: transform; filter: drop-shadow(0 18px 14px rgba(0,0,0,.32)); outline: none; }
+.sprite-world { position: static; pointer-events: none; }
+.sprite-companion {
+  --companion-size: 112px;
+  --sprite-facing: 1;
+  --effect-facing: 1;
+  --bubble-left: 50%;
+  --bubble-right: auto;
+  --bubble-top: auto;
+  --bubble-bottom: calc(100% - 3px);
+  --bubble-x: -50%;
+  --bubble-hidden-y: 8px;
+  --bubble-origin: 50% 100%;
+  position: fixed;
+  z-index: 6;
+  left: 0;
+  top: 0;
+  width: var(--companion-size);
+  height: var(--companion-size);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  will-change: transform;
+  filter: drop-shadow(0 18px 14px rgba(0,0,0,.32));
+  outline: none;
+}
+.sprite-companion.facing-left { --sprite-facing: -1; --effect-facing: -1; }
 .sprite-companion:active { cursor: grabbing; }
 .sprite-companion:focus-visible .sprite-body { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 18px; }
-.sprite-body { position: absolute; inset: 0; background: var(--sprite-url) center / contain no-repeat; image-rendering: pixelated; transform-origin: 50% 82%; transition: filter .2s ease; }
-.sprite-shadow { position: absolute; left: 19%; right: 19%; bottom: 4px; height: 12px; border-radius: 50%; background: rgba(0,0,0,.36); filter: blur(5px); transform: scaleX(.95); }
-.sprite-companion.walking .sprite-body { animation: spriteWalk .42s steps(2, end) infinite; }
-.sprite-companion.walking .sprite-shadow { animation: shadowWalk .42s ease-in-out infinite; }
-.sprite-companion.facing-left .sprite-body { transform: scaleX(-1); }
-.sprite-companion.walking.facing-left .sprite-body { animation-name: spriteWalkLeft; }
-.sprite-companion.alert .sprite-body { animation: spriteAlert .55s ease-in-out 3; filter: drop-shadow(0 0 12px var(--warn)); }
-.sprite-companion.sleeping .sprite-body { animation: spriteSleep 2.4s ease-in-out infinite; filter: saturate(.72) brightness(.82); }
-.sprite-companion.dragging .sprite-body { transform: translateY(-8px) scale(1.04); filter: drop-shadow(0 16px 10px rgba(0,0,0,.45)); }
-.sprite-companion.dragging.facing-left .sprite-body { transform: translateY(-8px) scale(-1.04, 1.04); }
-@keyframes spriteWalk { 0%,100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-7px) rotate(1.5deg); } }
-@keyframes spriteWalkLeft { 0%,100% { transform: translateY(0) scaleX(-1) rotate(-1.5deg); } 50% { transform: translateY(-7px) scaleX(-1) rotate(1.5deg); } }
-@keyframes shadowWalk { 50% { transform: scaleX(.72); opacity: .58; } }
-@keyframes spriteAlert { 0%,100% { transform: translateY(0) rotate(0); } 35% { transform: translateY(-12px) rotate(-4deg); } 70% { transform: translateY(-4px) rotate(4deg); } }
-@keyframes spriteSleep { 50% { transform: translateY(3px) scale(.985); } }
+.sprite-body {
+  position: absolute;
+  inset: 0;
+  background: var(--sprite-url) center / contain no-repeat;
+  image-rendering: pixelated;
+  transform: scaleX(var(--sprite-facing));
+  transform-origin: 50% 82%;
+  transition: filter .2s steps(2, end);
+}
+.sprite-shadow { position: absolute; left: 19%; right: 19%; bottom: 4px; height: 10px; border-radius: 2px; background: rgba(0,0,0,.34); opacity: .78; transform: scaleX(.95); }
+.sprite-effect {
+  position: absolute;
+  z-index: 2;
+  right: 2%;
+  top: 19%;
+  width: 28px;
+  height: 28px;
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+  opacity: 0;
+  transform: scaleX(var(--effect-facing));
+  transform-origin: 50% 50%;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.sprite-effect::before, .sprite-effect::after { content: ""; position: absolute; }
+.sprite-companion.facing-left .sprite-effect { left: 2%; right: auto; }
 
-.sprite-bubble { position: absolute; left: 50%; bottom: calc(100% - 3px); width: max-content; max-width: min(260px, 70vw); padding: 9px 11px; border: 1px solid var(--border); border-radius: 12px 12px 12px 3px; background: color-mix(in srgb, var(--surface-strong) 94%, #000); color: var(--text); box-shadow: 0 12px 30px rgba(0,0,0,.32); backdrop-filter: blur(14px); font-size: 11px; font-weight: 650; line-height: 1.38; opacity: 0; transform: translate(-50%, 8px) scale(.94); transform-origin: 50% 100%; pointer-events: none; transition: opacity .16s ease, transform .16s ease; }
-.sprite-companion.talking .sprite-bubble { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.sprite-companion.state-idle .sprite-body { animation: spriteIdle 3.2s steps(2, end) infinite; }
+.sprite-companion.state-walk { z-index: 0; }
+.sprite-companion.behind-content:not(.dragging) { z-index: 0; }
+.sprite-companion.behind-content:not(.dragging) .sprite-bubble { opacity: 0; }
+.sprite-companion.state-walk .sprite-body { animation: spriteWalk .48s steps(2, end) infinite; }
+.sprite-companion.state-walk .sprite-shadow { animation: shadowWalk .48s steps(2, end) infinite; }
+.sprite-companion.state-inspect .sprite-body { animation: spriteInspect 1s steps(3, end) infinite; }
+.sprite-companion.state-inspect .sprite-effect { top: 28%; width: 19px; height: 19px; border: 3px solid var(--accent); opacity: .9; animation: effectInspect 1s steps(2, end) infinite; }
+.sprite-companion.state-inspect .sprite-effect::before { inset: 5px; border: 2px solid var(--accent-2); }
+.sprite-companion.state-point .sprite-body { animation: spritePoint .72s steps(3, end) infinite; }
+.sprite-companion.state-point .sprite-effect { top: 46%; right: -5px; width: 26px; height: 4px; background: var(--accent); opacity: 1; animation: effectPoint .72s steps(3, end) infinite; }
+.sprite-companion.facing-left.state-point .sprite-effect { left: -5px; right: auto; }
+.sprite-companion.state-point .sprite-effect::after { right: -1px; top: -5px; width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-left: 9px solid var(--accent); }
+.sprite-companion.state-talk .sprite-body { animation: spriteTalk .42s steps(2, end) infinite; }
+.sprite-companion.state-talk .sprite-effect { top: 43%; width: 5px; height: 5px; background: var(--accent); box-shadow: 8px -5px 0 var(--accent-2); opacity: .9; animation: effectTalk .42s steps(2, end) infinite; }
+.sprite-companion.state-happy .sprite-body { animation: spriteHappy .82s steps(4, end) 2; filter: drop-shadow(0 0 9px color-mix(in srgb, var(--ok) 72%, transparent)); }
+.sprite-companion.state-happy .sprite-effect { width: 5px; height: 5px; background: var(--ok); box-shadow: -9px 9px 0 var(--accent), 10px 7px 0 var(--accent-2); opacity: 1; animation: effectSpark .82s steps(4, end) 2; }
+.sprite-companion.state-worried .sprite-body { animation: spriteWorried .7s steps(4, end) infinite; filter: saturate(.78) drop-shadow(0 0 7px color-mix(in srgb, var(--warn) 70%, transparent)); }
+.sprite-companion.state-worried .sprite-effect { opacity: 1; animation: effectPulse .7s steps(2, end) infinite; }
+.sprite-companion.state-worried .sprite-effect::before { content: "!"; inset: 0; color: var(--warn); }
+.sprite-companion.state-critical .sprite-body { animation: spriteCritical .4s steps(4, end) infinite; filter: saturate(1.2) drop-shadow(0 0 12px var(--danger)); }
+.sprite-companion.state-critical .sprite-effect { width: 31px; opacity: 1; animation: effectPulse .4s steps(2, end) infinite; }
+.sprite-companion.state-critical .sprite-effect::before { content: "!!"; inset: 0; color: var(--danger); }
+.sprite-companion.state-hot .sprite-body { animation: spriteHot .9s steps(3, end) infinite; filter: sepia(.34) saturate(1.35) drop-shadow(0 0 9px var(--danger)); }
+.sprite-companion.state-hot .sprite-effect { top: 12%; width: 5px; height: 5px; background: var(--danger); box-shadow: -10px 12px 0 var(--warn), 8px 17px 0 var(--danger); opacity: .9; animation: effectHeat .9s steps(3, end) infinite; }
+.sprite-companion.state-cold .sprite-body { animation: spriteCold .66s steps(4, end) infinite; filter: saturate(.72) brightness(.9) drop-shadow(0 0 10px #8bdcff); }
+.sprite-companion.state-cold .sprite-effect { top: 14%; width: 5px; height: 5px; background: #d7f4ff; box-shadow: -9px 12px 0 #8bdcff, 9px 18px 0 #d7f4ff; opacity: .95; animation: effectSnow 1.15s steps(4, end) infinite; }
+.sprite-companion.state-sleep .sprite-body { animation: spriteSleep 2.4s steps(2, end) infinite; filter: saturate(.7) brightness(.8); }
+.sprite-companion.state-sleep .sprite-effect { top: 12%; width: 34px; opacity: .9; animation: effectSleep 2.4s steps(3, end) infinite; }
+.sprite-companion.state-sleep .sprite-effect::before { content: "Zz"; inset: 0; color: var(--muted); }
+.sprite-companion.state-wake .sprite-body { animation: spriteWake .78s steps(4, end) 1 both; }
+.sprite-companion.state-wake .sprite-effect { opacity: 1; animation: effectWake .78s steps(4, end) 1 both; }
+.sprite-companion.state-wake .sprite-effect::before { content: "!"; inset: 0; color: var(--accent); }
+.sprite-companion.state-confused .sprite-body { animation: spriteConfused 1.05s steps(4, end) infinite; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent-2) 72%, transparent)); }
+.sprite-companion.state-confused .sprite-effect { opacity: 1; animation: effectConfused 1.05s steps(4, end) infinite; }
+.sprite-companion.state-confused .sprite-effect::before { content: "?"; inset: 0; color: var(--accent-2); }
+.sprite-companion.state-celebrate .sprite-body { animation: spriteCelebrate .9s steps(5, end) 3; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--ok) 70%, transparent)); }
+.sprite-companion.state-celebrate .sprite-effect { top: 8%; width: 5px; height: 5px; background: var(--accent); box-shadow: -14px 10px 0 var(--ok), 13px 12px 0 var(--accent-2), -5px 24px 0 var(--warn), 14px 28px 0 var(--danger); opacity: 1; animation: effectCelebrate .9s steps(5, end) 3; }
+
+.sprite-companion.dragging { z-index: 7; pointer-events: auto; }
+.sprite-companion.dragging .sprite-body { animation: none; transform: translateY(-8px) scaleX(var(--sprite-facing)) scale(1.04); filter: drop-shadow(0 16px 10px rgba(0,0,0,.45)); }
+.sprite-companion.dragging .sprite-effect { animation: none; opacity: 0; }
+
+@keyframes spriteIdle { 0%,88%,100% { transform: translateY(0) scaleX(var(--sprite-facing)); } 92% { transform: translateY(-2px) scaleX(var(--sprite-facing)); } }
+@keyframes spriteWalk { 0%,100% { transform: translateY(0) scaleX(var(--sprite-facing)) rotate(-1.5deg); } 50% { transform: translateY(-7px) scaleX(var(--sprite-facing)) rotate(1.5deg); } }
+@keyframes shadowWalk { 50% { transform: scaleX(.72); opacity: .52; } }
+@keyframes spriteInspect { 0%,100% { transform: translateY(0) scaleX(var(--sprite-facing)) rotate(0); } 50% { transform: translateY(2px) scaleX(var(--sprite-facing)) rotate(3deg); } }
+@keyframes spritePoint { 0%,100% { transform: translateX(0) scaleX(var(--sprite-facing)); } 50% { transform: translateX(4px) scaleX(var(--sprite-facing)) rotate(2deg); } }
+@keyframes spriteTalk { 0%,100% { transform: translateY(0) scaleX(var(--sprite-facing)); } 50% { transform: translateY(-3px) scaleX(var(--sprite-facing)) scale(1.015); } }
+@keyframes spriteHappy { 0%,100% { transform: translateY(0) scaleX(var(--sprite-facing)); } 35% { transform: translateY(-10px) scaleX(var(--sprite-facing)) rotate(-3deg); } 70% { transform: translateY(-3px) scaleX(var(--sprite-facing)) rotate(3deg); } }
+@keyframes spriteWorried { 0%,100% { transform: translateX(0) scaleX(var(--sprite-facing)) rotate(0); } 25% { transform: translateX(-2px) scaleX(var(--sprite-facing)) rotate(-2deg); } 75% { transform: translateX(2px) scaleX(var(--sprite-facing)) rotate(2deg); } }
+@keyframes spriteCritical { 0%,100% { transform: translateX(0) scaleX(var(--sprite-facing)); } 25% { transform: translateX(-5px) scaleX(var(--sprite-facing)) rotate(-3deg); } 75% { transform: translateX(5px) scaleX(var(--sprite-facing)) rotate(3deg); } }
+@keyframes spriteHot { 0%,100% { transform: translateY(0) scaleX(var(--sprite-facing)); } 50% { transform: translateY(3px) scaleX(var(--sprite-facing)) scale(.985); } }
+@keyframes spriteCold { 0%,100% { transform: translateX(0) scaleX(var(--sprite-facing)); } 25% { transform: translateX(-2px) scaleX(var(--sprite-facing)); } 75% { transform: translateX(2px) scaleX(var(--sprite-facing)); } }
+@keyframes spriteSleep { 0%,100% { transform: translateY(0) scaleX(var(--sprite-facing)); } 50% { transform: translateY(3px) scaleX(var(--sprite-facing)) scale(.985); } }
+@keyframes spriteWake { 0% { transform: translateY(7px) scaleX(var(--sprite-facing)) scale(.9); } 55% { transform: translateY(-11px) scaleX(var(--sprite-facing)) scale(1.04); } 100% { transform: translateY(0) scaleX(var(--sprite-facing)) scale(1); } }
+@keyframes spriteConfused { 0%,100% { transform: scaleX(var(--sprite-facing)) rotate(0); } 25% { transform: scaleX(var(--sprite-facing)) rotate(-5deg); } 75% { transform: scaleX(var(--sprite-facing)) rotate(5deg); } }
+@keyframes spriteCelebrate { 0%,100% { transform: translateY(0) scaleX(var(--sprite-facing)) rotate(0); } 30% { transform: translateY(-13px) scaleX(var(--sprite-facing)) rotate(-6deg); } 60% { transform: translateY(-7px) scaleX(var(--sprite-facing)) rotate(6deg); } }
+@keyframes effectInspect { 50% { transform: scaleX(var(--effect-facing)) scale(.78); opacity: .62; } }
+@keyframes effectPoint { 50% { transform: translateX(5px) scaleX(var(--effect-facing)); } }
+@keyframes effectTalk { 50% { transform: translate(4px, -3px) scaleX(var(--effect-facing)); opacity: .55; } }
+@keyframes effectSpark { 50% { transform: translateY(-5px) scaleX(var(--effect-facing)) scale(1.25); } }
+@keyframes effectPulse { 50% { transform: translateY(-3px) scaleX(var(--effect-facing)) scale(1.18); opacity: .58; } }
+@keyframes effectHeat { to { transform: translateY(-12px) scaleX(var(--effect-facing)); opacity: .28; } }
+@keyframes effectSnow { to { transform: translateY(13px) scaleX(var(--effect-facing)); opacity: .3; } }
+@keyframes effectSleep { 50% { transform: translate(5px, -8px) scaleX(var(--effect-facing)) scale(1.12); opacity: .48; } }
+@keyframes effectWake { 0% { transform: translateY(8px) scaleX(var(--effect-facing)) scale(.5); opacity: 0; } 55% { transform: translateY(-7px) scaleX(var(--effect-facing)) scale(1.3); opacity: 1; } 100% { transform: scaleX(var(--effect-facing)); opacity: 0; } }
+@keyframes effectConfused { 50% { transform: translateY(-7px) scaleX(var(--effect-facing)) rotate(8deg); } }
+@keyframes effectCelebrate { 50% { transform: translateY(-13px) scaleX(var(--effect-facing)) rotate(8deg); opacity: .58; } }
+
+.sprite-bubble {
+  position: absolute;
+  left: var(--bubble-left);
+  right: var(--bubble-right);
+  top: var(--bubble-top);
+  bottom: var(--bubble-bottom);
+  width: max-content;
+  max-width: min(260px, 70vw);
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 12px 12px 12px 3px;
+  background: color-mix(in srgb, var(--surface-strong) 94%, #000);
+  color: var(--text);
+  box-shadow: 0 12px 30px rgba(0,0,0,.32);
+  backdrop-filter: blur(14px);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.38;
+  opacity: 0;
+  transform: translate(var(--bubble-x), var(--bubble-hidden-y)) scale(.94);
+  transform-origin: var(--bubble-origin);
+  pointer-events: none;
+  transition: opacity .16s steps(2, end), transform .16s steps(2, end);
+}
+.sprite-companion.talking .sprite-bubble { opacity: 1; transform: translate(var(--bubble-x), 0) scale(1); }
+.sprite-companion.bubble-left { --bubble-left: auto; --bubble-right: 0; --bubble-x: 0; --bubble-origin: 100% 100%; }
+.sprite-companion.bubble-right { --bubble-left: 0; --bubble-right: auto; --bubble-x: 0; --bubble-origin: 0 100%; }
+.sprite-companion.bubble-below { --bubble-top: calc(100% - 3px); --bubble-bottom: auto; --bubble-hidden-y: -8px; --bubble-origin: 50% 0; }
 .sprite-bubble::after { content: ""; position: absolute; left: 20px; top: 100%; width: 10px; height: 10px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); background: inherit; transform: translateY(-5px) rotate(45deg); }
+.sprite-companion.bubble-left .sprite-bubble::after { left: auto; right: 20px; }
+.sprite-companion.bubble-below .sprite-bubble::after { top: -5px; border: 0; border-left: 1px solid var(--border); border-top: 1px solid var(--border); transform: rotate(45deg); }
 .sprite-name { display: block; margin-bottom: 2px; color: var(--accent); font-size: 9px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
 .sprite-dock { position: fixed; z-index: 5; right: 14px; bottom: 14px; width: 120px; height: 42px; border: 1px dashed color-mix(in srgb, var(--accent) 30%, var(--border)); border-radius: 18px; opacity: .18; pointer-events: none; }
 
@@ -239,6 +381,5 @@ h1 { margin: 0; font-size: clamp(18px, 4vw, 24px); letter-spacing: -.04em; white
 }
 @media (max-width: 390px) { .hero { padding: 18px; } .hero-status { font-size: 10px; } }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
-  .sprite-world { display: none; }
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sprite Reaction Engine - testes</title>
+  <style>
+    body { margin: 24px; background: #101421; color: #edf3ff; font: 15px/1.5 system-ui, sans-serif; }
+    pre { padding: 16px; overflow: auto; border: 1px solid #33405f; border-radius: 12px; white-space: pre-wrap; }
+    [data-result="passed"] pre { border-color: #31c48d; }
+    [data-result="failed"] pre { border-color: #f05252; }
+  </style>
+</head>
+<body data-result="running">
+  <h1>Sprite Reaction Engine</h1>
+  <pre id="result">Executando...</pre>
+  <script type="module">
+    import { spriteReactionEngineCases } from "./sprite-reaction-engine.cases.js";
+
+    const output = document.querySelector("#result");
+    const lines = [];
+    const stable = value => JSON.stringify(value);
+    const assertions = {
+      equal(actual, expected, message = "") {
+        if (!Object.is(actual, expected)) {
+          throw new Error(`${message || "Valores diferentes"}: ${stable(actual)} !== ${stable(expected)}`);
+        }
+      },
+      deepEqual(actual, expected, message = "") {
+        if (stable(actual) !== stable(expected)) {
+          throw new Error(`${message || "Estruturas diferentes"}: ${stable(actual)} !== ${stable(expected)}`);
+        }
+      },
+      ok(value, message = "Condição não atendida") {
+        if (!value) throw new Error(message);
+      },
+    };
+
+    let failures = 0;
+    for (const testCase of spriteReactionEngineCases) {
+      try {
+        await testCase.run(assertions);
+        lines.push(`PASS ${testCase.name}`);
+      } catch (error) {
+        failures += 1;
+        lines.push(`FAIL ${testCase.name}\n  ${error.stack || error.message}`);
+      }
+    }
+
+    document.body.dataset.result = failures ? "failed" : "passed";
+    document.body.dataset.total = String(spriteReactionEngineCases.length);
+    document.body.dataset.failures = String(failures);
+    output.textContent = `${spriteReactionEngineCases.length - failures}/${spriteReactionEngineCases.length} testes passaram\n\n${lines.join("\n")}`;
+  </script>
+</body>
+</html>

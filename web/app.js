@@ -1,4 +1,4 @@
-import { SpriteEngine } from "./sprite-engine.js";
+import { SpriteReactionEngine } from "./sprite-reaction-engine.js";
 
 const STORAGE_KEY = "codex-pulse-design-v2";
 const defaults = {
@@ -18,6 +18,8 @@ const defaults = {
   spriteTalkInterval: 18,
   spriteRoam: true,
   spriteSmart: true,
+  spriteSpeech: true,
+  spriteMovement: true,
   customCss: "",
 };
 
@@ -35,6 +37,8 @@ const state = {
   statusTimer: null,
   telemetryTimer: null,
   lastHumanInteractionAt: Date.now(),
+  statusError: "",
+  telemetryError: "",
   design: loadDesign(),
   spriteEngine: null,
 };
@@ -43,7 +47,11 @@ function byId(id) { return document.getElementById(id); }
 function validColor(value, fallback) { return /^#[0-9a-f]{6}$/i.test(value || "") ? value : fallback; }
 function cleanUrl(value) { try { return value ? new URL(value, location.href).href : ""; } catch { return ""; } }
 function escapeHtml(value) { const element = document.createElement("div"); element.textContent = value; return element.innerHTML; }
-function safePercent(value) { const number = Number(value); return Number.isFinite(number) ? Math.max(0, Math.min(100, Math.round(number))) : null; }
+function safePercent(value) {
+  if (value === null || value === undefined || value === "" || typeof value === "boolean") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.min(100, Math.round(number))) : null;
+}
 function parseDate(value) { const date = value ? new Date(value) : null; return date && !Number.isNaN(date.getTime()) ? date : null; }
 function formatNumber(value, digits = 0) { const number = Number(value); return Number.isFinite(number) ? number.toFixed(digits) : "--"; }
 
@@ -123,7 +131,9 @@ function applyDesign() {
     speed: Number(d.spriteSpeed),
     talkInterval: Number(d.spriteTalkInterval),
     roam: Boolean(d.spriteRoam),
-    smart: Boolean(d.spriteSmart),
+    reactions: Boolean(d.spriteSmart),
+    speech: Boolean(d.spriteSpeech),
+    movement: Boolean(d.spriteMovement),
   });
   byId("companionBadge").textContent = d.spriteEnabled
     ? `${Number(d.spriteCount) || 1} companheiro${Number(d.spriteCount) === 1 ? "" : "s"} ativo${Number(d.spriteCount) === 1 ? "" : "s"}`
@@ -149,6 +159,8 @@ function syncControls() {
   byId("spriteEnabledInput").checked = Boolean(d.spriteEnabled);
   byId("spriteRoamInput").checked = Boolean(d.spriteRoam);
   byId("spriteSmartInput").checked = Boolean(d.spriteSmart);
+  byId("spriteSpeechInput").checked = Boolean(d.spriteSpeech);
+  byId("spriteMovementInput").checked = Boolean(d.spriteMovement);
   byId("customCssInput").value = d.customCss;
   document.querySelectorAll("[data-template]").forEach(button => button.classList.toggle("active", button.dataset.template === d.template));
   document.querySelectorAll(".sprite-option").forEach(button => button.classList.toggle("active", button.dataset.sprite === d.sprite));
@@ -242,29 +254,34 @@ function renderTelemetry() {
 }
 
 function currentSpriteContext() {
-  const telemetry = state.telemetry || {};
-  const usage = state.usage || {};
   return {
-    clock: telemetry.clock || { time: new Date().toLocaleTimeString("pt-BR"), date: new Date().toLocaleDateString("pt-BR") },
-    idleSeconds: Math.floor((Date.now() - state.lastHumanInteractionAt) / 1000),
-    weather: {
-      temperatureC: telemetry.weather?.temperature_c,
-      condition: telemetry.weather?.condition,
-      location: telemetry.weather?.location,
-      icon: telemetry.weather?.icon,
-    },
-    machine: {
-      cpuPercent: telemetry.machine?.cpu_percent,
-      memoryPercent: telemetry.machine?.memory_percent,
-      diskPercent: telemetry.machine?.disk_percent,
-    },
-    codex: {
-      fiveHourPercent: usage.resets?.limite_5h?.remaining_percent,
-      weeklyPercent: usage.resets?.limite_semanal?.remaining_percent,
-      fiveHourResetAt: usage.resets?.limite_5h?.reset_at,
-      weeklyResetAt: usage.resets?.limite_semanal?.reset_at,
+    usage: state.usage || {},
+    health: state.health || {},
+    telemetry: state.telemetry || {},
+    settings: state.settings,
+    panelIdleSeconds: Math.floor((Date.now() - state.lastHumanInteractionAt) / 1000),
+    errors: {
+      status: state.statusError,
+      telemetry: state.telemetryError,
     },
   };
+}
+
+function ingestSpriteContext() {
+  state.spriteEngine?.ingest(currentSpriteContext());
+}
+
+function handleStatusError(error) {
+  state.statusError = error?.message || String(error || "Falha desconhecida");
+  byId("statusBadge").textContent = "Painel offline";
+  setNotice(`Não foi possível ler os dados locais: ${state.statusError}`, "error");
+  ingestSpriteContext();
+}
+
+function handleTelemetryError(error) {
+  state.telemetryError = error?.message || String(error || "Falha desconhecida");
+  byId("weatherCondition").textContent = `Telemetria indisponível: ${state.telemetryError}`;
+  ingestSpriteContext();
 }
 
 async function loadStatus() {
@@ -274,7 +291,9 @@ async function loadStatus() {
   state.usage = payload.usage || {};
   state.health = payload.health || {};
   state.settings = { ...state.settings, ...(payload.settings || {}) };
+  state.statusError = "";
   renderStatus();
+  ingestSpriteContext();
   scheduleStatusRefresh();
 }
 
@@ -282,18 +301,20 @@ async function loadTelemetry() {
   const response = await fetch(`/api/telemetry?t=${Date.now()}`, { cache: "no-store" });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   state.telemetry = await response.json();
+  state.telemetryError = "";
   renderTelemetry();
+  ingestSpriteContext();
   scheduleTelemetryRefresh();
 }
 
 function scheduleStatusRefresh() {
   clearInterval(state.statusTimer);
-  state.statusTimer = setInterval(() => loadStatus().catch(() => {}), Math.max(15, Number(state.settings.auto_refresh_seconds || 60)) * 1000);
+  state.statusTimer = setInterval(() => loadStatus().catch(handleStatusError), Math.max(15, Number(state.settings.auto_refresh_seconds || 60)) * 1000);
 }
 
 function scheduleTelemetryRefresh() {
   clearInterval(state.telemetryTimer);
-  state.telemetryTimer = setInterval(() => loadTelemetry().catch(() => {}), Math.max(3, Number(state.settings.telemetry_refresh_seconds || 5)) * 1000);
+  state.telemetryTimer = setInterval(() => loadTelemetry().catch(handleTelemetryError), Math.max(3, Number(state.settings.telemetry_refresh_seconds || 5)) * 1000);
 }
 
 async function refreshNow() {
@@ -306,11 +327,15 @@ async function refreshNow() {
     const payload = await response.json();
     state.usage = payload.usage || state.usage;
     state.health = payload.health || state.health;
+    state.statusError = response.ok ? "" : payload.message || payload.error || "A coleta não foi concluída.";
     renderStatus();
-    await loadTelemetry().catch(() => {});
+    ingestSpriteContext();
+    await loadTelemetry().catch(handleTelemetryError);
     if (!response.ok) setNotice(payload.message || payload.error || "A coleta não foi concluída.", "warn");
   } catch (error) {
+    state.statusError = error.message;
     setNotice(`Falha ao atualizar: ${error.message}`, "error");
+    ingestSpriteContext();
   } finally {
     button.disabled = false;
     button.innerHTML = "↻ <span>Atualizar</span>";
@@ -318,6 +343,7 @@ async function refreshNow() {
 }
 
 function registerHumanInteraction() {
+  state.spriteEngine?.notifyUserInteraction();
   state.lastHumanInteractionAt = Date.now();
 }
 
@@ -352,6 +378,8 @@ function bindEvents() {
   byId("spriteEnabledInput").addEventListener("change", event => updateDesign({ spriteEnabled: event.target.checked }));
   byId("spriteRoamInput").addEventListener("change", event => updateDesign({ spriteRoam: event.target.checked }));
   byId("spriteSmartInput").addEventListener("change", event => updateDesign({ spriteSmart: event.target.checked }));
+  byId("spriteSpeechInput").addEventListener("change", event => updateDesign({ spriteSpeech: event.target.checked }));
+  byId("spriteMovementInput").addEventListener("change", event => updateDesign({ spriteMovement: event.target.checked }));
 
   byId("imageUrlInput").addEventListener("change", event => updateDesign({ imageUrl: cleanUrl(event.target.value), videoUrl: "" }));
   byId("videoUrlInput").addEventListener("change", event => updateDesign({ videoUrl: cleanUrl(event.target.value), imageUrl: "" }));
@@ -360,13 +388,13 @@ function bindEvents() {
   byId("clearMedia").addEventListener("click", () => updateDesign({ imageUrl: "", videoUrl: "" }));
   byId("resetDesign").addEventListener("click", () => { state.design = { ...defaults }; saveDesign(); applyDesign(); });
 
-  ["pointerdown", "keydown", "touchstart", "wheel"].forEach(eventName => {
+  ["pointerdown", "pointermove", "keydown", "touchstart", "wheel"].forEach(eventName => {
     document.addEventListener(eventName, registerHumanInteraction, { passive: true, capture: true });
   });
 }
 
 function bootstrap() {
-  state.spriteEngine = new SpriteEngine({
+  state.spriteEngine = new SpriteReactionEngine({
     root: byId("spriteWorld"),
     getContext: currentSpriteContext,
     onHumanInteraction: registerHumanInteraction,
@@ -376,13 +404,8 @@ function bootstrap() {
   tickUi();
   setInterval(tickUi, 1000);
 
-  loadStatus().catch(error => {
-    byId("statusBadge").textContent = "Painel offline";
-    setNotice(`Não foi possível ler os dados locais: ${error.message}`, "error");
-  });
-  loadTelemetry().catch(error => {
-    byId("weatherCondition").textContent = `Telemetria indisponível: ${error.message}`;
-  });
+  loadStatus().catch(handleStatusError);
+  loadTelemetry().catch(handleTelemetryError);
 }
 
 bootstrap();

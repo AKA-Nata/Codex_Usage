@@ -25,15 +25,17 @@ Os sprites são renderizados em uma camada livre e podem:
 - andar pela tela;
 - ser arrastados;
 - visitar relógio, clima, máquina e cards do Codex;
-- alertar sobre limites baixos;
-- alertar sobre CPU ou memória elevadas;
-- comentar o tempo sem interação;
+- reagir por estado, movimento e fala às faixas de uso e ao tempo de reset;
+- alertar sobre CPU, memória e disco elevados;
+- sentir frio, calor e reagir à chuva;
+- dormir após inatividade e acordar quando o usuário retorna;
+- vigiar coleta desatualizada, com erro ou telemetria indisponível;
 - falar ao serem clicados;
-- trabalhar em grupos de um a três companheiros.
+- trabalhar em grupos de um a três companheiros sem repetir a mesma fala.
 
 No estúdio visual é possível escolher personagem principal, quantidade,
-tamanho, velocidade, intervalo de fala e ativar ou desativar movimento e
-interações inteligentes.
+tamanho, velocidade e intervalo de fala. Falas, deslocamento, movimento livre e
+reações contextuais podem ser ativados ou desativados separadamente.
 
 ## Requisitos
 

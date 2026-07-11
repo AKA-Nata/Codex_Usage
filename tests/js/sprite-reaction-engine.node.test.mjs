@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { spriteReactionEngineCases } from "./sprite-reaction-engine.cases.js";
+
+const assertions = {
+  equal: (actual, expected, message) => assert.equal(actual, expected, message),
+  deepEqual: (actual, expected, message) => assert.deepEqual(actual, expected, message),
+  ok: (value, message) => assert.ok(value, message),
+};
+
+for (const testCase of spriteReactionEngineCases) {
+  test(testCase.name, () => testCase.run(assertions));
+}

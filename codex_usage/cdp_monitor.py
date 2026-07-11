@@ -112,6 +112,22 @@ def _health(config: dict[str, Any], status: str, message: str | None, mode: str 
     }
 
 
+def _safe_failure_message(exc: Exception) -> str:
+    if isinstance(exc, CdpUnavailableError):
+        return (
+            "Nao foi possivel concluir a coleta CDP. Verifique se o Edge dedicado "
+            "esta aberto e se a aba de Analytics permanece disponivel."
+        )
+    return "Falha inesperada durante a coleta CDP. Tente novamente."
+
+
+def _record_unhandled_failure(config: dict[str, Any], exc: Exception) -> str:
+    message = _safe_failure_message(exc)
+    health_path = resolve_path(config, "health_json", "data/collector-health.json")
+    atomic_write_json(health_path, _health(config, "error", message))
+    return message
+
+
 def collect_from_open_tab(config: dict[str, Any], logger: logging.Logger, *, reload_page: bool = True) -> dict[str, Any]:
     settings = _cdp_settings(config)
     target = _select_target(_targets(settings["host"], settings["port"]), config["codex_usage_url"])
@@ -195,10 +211,17 @@ def main() -> int:
     logger = configure_logging(resolve_path(config, "log_file", "logs/collector.log"))
     interval = _cdp_settings(config)["refresh_minutes"] * 60
     while True:
+        health_path = resolve_path(config, "health_json", "data/collector-health.json")
+        health_before = read_json(health_path, {})
         try:
             print(json.dumps(collect_from_open_tab(config, logger, reload_page=not args.no_reload), ensure_ascii=False, indent=2))
         except Exception as exc:
-            print(f"Falha no monitor CDP: {exc}")
+            health_after = read_json(health_path, {})
+            if health_after == health_before:
+                message = _record_unhandled_failure(config, exc)
+            else:
+                message = str(health_after.get("message") or _safe_failure_message(exc))
+            print(f"Falha no monitor CDP: {message}")
             if not args.watch:
                 return 1
         if not args.watch:

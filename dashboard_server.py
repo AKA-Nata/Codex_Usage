@@ -19,7 +19,7 @@ CDP_MONITOR_COMMAND = [sys.executable, "-m", "codex_usage.cdp_monitor"]
 
 
 class DashboardHandler(SimpleHTTPRequestHandler):
-    server_version = "CodexUsageDashboard/4.0.1"
+    server_version = "CodexUsageDashboard/4.1.1"
 
     def __init__(self, *args, directory=None, **kwargs):
         super().__init__(*args, directory=str(WEB_DIR), **kwargs)

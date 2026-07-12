@@ -1,6 +1,46 @@
 
 # Changelog
 
+## 4.1.1
+
+- Corrigida a validação de `casualSpeech`, `features`, `coordination` e `motion`,
+  permitindo que `sprite-behaviors.json` seja carregado em runtime.
+- Removido o campo legado do hero no HTML, armazenamento e bindings do painel.
+- Adicionada coleta opcional de GPU NVIDIA via `nvidia-smi`, sem nova
+  dependência Python.
+- Métricas de memória e disco agora rejeitam capacidades impossíveis e
+  retornam estado parcial em vez de exibir valores incorretos.
+- Adicionados testes de GPU e sanidade de capacidade; bateria atual com 15
+  testes Python e 28 casos JavaScript.
+- Adicionado `scripts/package_source.ps1` para gerar entregas seguras com
+  `git archive`, sem perfil do Edge, `.git`, logs ou dados operacionais.
+- Documentação de validação e segurança ajustada para não declarar smoke visual
+  como executado antes da validação real no Windows/Edge.
+
+## 4.1.0
+
+- Adicionada configuração declarativa em `web/config/sprite-behaviors.json`,
+  acompanhada de JSON Schema, para macros, frases, cards, prioridades,
+  cooldowns e gatilhos dos companheiros.
+- O motor passou a interpretar operadores, grupos lógicos, faixas de horário,
+  mudanças de valores e eventos de clique, arraste, inatividade, retorno, erro
+  e recuperação, com validação amigável e fallback seguro.
+- Dashboard simplificado para quatro cards ambientais e dois cards do Codex,
+  com status da coleta no cabeçalho e zonas reservadas para os sprites.
+- Sprites mantidos sempre acima dos cards, com docas seguras, prevenção de
+  colisões, suporte a resize e de um a três personagens.
+- Corrigida a associação de limite atingido às janelas de 5 horas e semanal.
+- A inatividade do painel passou a ser prioritária nas reações; a ociosidade do
+  Windows permanece preservada separadamente na telemetria.
+- Estados contextuais ampliados sem novos bitmaps: os assets pixel art atuais
+  são reaproveitados com animações e efeitos CSS.
+- Saúde da coleta passa a registrar falhas inesperadas imediatamente, sem
+  descartar o último uso válido.
+- Finais de linha passam a ser normalizados por `.gitattributes`, preservando
+  arquivos binários e evitando diffs mistos entre Windows e runners locais.
+- Cobertura ampliada para 28 casos JavaScript, 15 verificações E2E no Edge e
+  12 testes Python, mantendo toda a execução sem VENV ou instalação automática.
+
 ## 4.0.1
 
 - Removida toda dependência operacional de `.venv`.

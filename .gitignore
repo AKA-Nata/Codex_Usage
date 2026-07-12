@@ -14,3 +14,7 @@ data/collector-health.json
 .env.*
 Thumbs.db
 .DS_Store
+
+# Pacotes locais potencialmente sensíveis
+.git.zip
+README.zip

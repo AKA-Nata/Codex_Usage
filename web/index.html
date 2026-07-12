@@ -22,82 +22,85 @@
           <h1 id="appTitle">Codex Pulse</h1>
         </div>
       </div>
-      <div class="top-actions" data-sprite-protected>
-        <button id="refreshButton" class="button primary" type="button" title="Atualizar agora">↻ <span>Atualizar</span></button>
-        <button id="openStudio" class="icon-button" type="button" aria-label="Abrir personalização" title="Personalizar">⚙</button>
-      </div>
-    </header>
-
-    <section class="hero" data-sprite-anchor="hero">
-      <div class="hero-copy">
-        <p class="eyebrow" data-sprite-protected>Seu painel, seu universo</p>
-        <h2 id="heroTitle" data-sprite-protected>Uso em <em>tempo real.</em></h2>
-        <p id="heroSubtitle" class="subtitle" data-sprite-protected>Os companheiros agora circulam pela interface, observam os dados e chamam atenção para o que importa.</p>
-        <div class="hero-status-row">
-          <div id="statusBadge" class="hero-status" data-sprite-anchor="status" data-sprite-protected>Conectando ao monitor</div>
-          <div id="companionBadge" class="hero-status companion-status" data-sprite-protected>Companheiros ativos</div>
+      <div class="header-tools">
+        <div class="header-status">
+          <span id="statusBadge" class="status-pill" data-sprite-anchor="status" data-sprite-protected>Conectando ao monitor</span>
+          <span class="header-update" data-sprite-protected><b>Codex</b><span id="collectedAt">--</span></span>
+          <span class="header-update" data-sprite-protected><b>Sistema</b><span id="telemetryUpdatedAt">--</span></span>
+          <span id="companionBadge" class="header-companions" data-sprite-protected>Companheiros ativos</span>
+        </div>
+        <div class="top-actions" data-sprite-protected>
+          <button id="refreshButton" class="button primary" type="button" title="Atualizar agora">↻ <span>Atualizar</span></button>
+          <button id="openStudio" class="icon-button" type="button" aria-label="Abrir personalização" title="Personalizar">⚙</button>
         </div>
       </div>
-      <div class="hero-orbit" aria-hidden="true">
-        <span></span><span></span><span></span>
-      </div>
-    </section>
+    </header>
 
     <div id="notice" class="notice" role="status" data-sprite-protected></div>
 
     <div class="section-head">
       <div data-sprite-protected><p class="eyebrow">Ambiente</p><h3>Informações em tempo real</h3></div>
-      <span id="telemetryUpdatedAt" data-sprite-protected>--</span>
     </div>
 
     <section class="ambient-grid">
-      <article class="ambient-card" data-sprite-anchor="clock">
-        <div class="ambient-icon">◷</div>
-        <div data-sprite-protected><span>Hora local</span><strong id="clockValue">--:--:--</strong><small id="dateValue">--/--/----</small></div>
+      <article id="card-clock" class="ambient-card" data-sprite-anchor="clock">
+        <div class="ambient-main" data-sprite-protected>
+          <div class="ambient-icon">◷</div>
+          <div class="ambient-copy"><span>Hora local</span><strong id="clockValue">--:--:--</strong><small id="dateValue">--/--/----</small></div>
+        </div>
+        <span class="sprite-safe-zone" data-sprite-safe-zone aria-hidden="true"></span>
       </article>
-      <article class="ambient-card" data-sprite-anchor="idle">
-        <div class="ambient-icon">⌁</div>
-        <div data-sprite-protected><span>Sem interação</span><strong id="idleValue">0s</strong><small>atividade neste painel</small></div>
+      <article id="card-idle" class="ambient-card" data-sprite-anchor="idle">
+        <div class="ambient-main" data-sprite-protected>
+          <div class="ambient-icon">⌁</div>
+          <div class="ambient-copy"><span>Sem interação</span><strong id="idleValue">0s</strong><small>atividade neste painel</small></div>
+        </div>
+        <span class="sprite-safe-zone" data-sprite-safe-zone aria-hidden="true"></span>
       </article>
-      <article class="ambient-card" data-sprite-anchor="weather">
-        <div id="weatherIcon" class="ambient-icon">◌</div>
-        <div data-sprite-protected><span id="weatherLocation">Temperatura</span><strong id="temperatureValue">--°C</strong><small id="weatherCondition">Aguardando</small></div>
+      <article id="card-weather" class="ambient-card" data-sprite-anchor="weather">
+        <div class="ambient-main" data-sprite-protected>
+          <div id="weatherIcon" class="ambient-icon">◌</div>
+          <div class="ambient-copy"><span id="weatherLocation">Temperatura</span><strong id="temperatureValue">--°C</strong><small id="weatherCondition">Aguardando</small></div>
+        </div>
+        <span class="sprite-safe-zone" data-sprite-safe-zone aria-hidden="true"></span>
       </article>
-      <article class="ambient-card machine-card" data-sprite-anchor="machine">
-        <div class="ambient-icon">⌘</div>
-        <div class="machine-copy" data-sprite-protected><span>Uso da máquina</span><strong id="machineValue">CPU --% · RAM --%</strong><small id="machineDetail">Disco --%</small></div>
+      <article id="card-machine" class="ambient-card machine-card" data-sprite-anchor="machine">
+        <div class="ambient-main" data-sprite-protected>
+          <div class="ambient-icon">⌘</div>
+          <div class="machine-copy"><span>Uso da máquina</span><strong id="machineValue">CPU --% · RAM --%</strong><small id="machineDetail">Disco --%</small></div>
+        </div>
         <div class="machine-bars" aria-hidden="true">
           <i><b id="cpuMiniBar"></b></i><i><b id="ramMiniBar"></b></i>
         </div>
+        <span class="sprite-safe-zone" data-sprite-safe-zone aria-hidden="true"></span>
       </article>
     </section>
 
     <div class="section-head">
       <div data-sprite-protected><p class="eyebrow">Codex</p><h3>Capacidade disponível</h3></div>
-      <span id="collectedAt" data-sprite-protected>--</span>
     </div>
 
     <section class="usage-grid">
-      <article class="usage-card" data-sprite-anchor="codex-5h">
-        <p class="card-label" data-sprite-protected>Limite de uso de 5 horas</p>
-        <div class="percent-row" data-sprite-protected><p id="percent5h" class="percent">--%</p><small>restantes</small></div>
-        <div class="progress" data-sprite-protected><div id="fill5h" class="fill"></div></div>
-        <p id="countdown5h" class="countdown" data-reset-at="" data-sprite-protected>Redefinição: --</p>
-        <p id="exact5h" class="exact-time" data-sprite-protected>--</p>
+      <article id="card-five-hour" class="usage-card" data-sprite-anchor="codex-5h">
+        <div class="usage-content" data-sprite-protected>
+          <p class="card-label">Limite de uso de 5 horas</p>
+          <div class="percent-row"><p id="percent5h" class="percent">--%</p><small>restantes</small></div>
+          <div class="progress"><div id="fill5h" class="fill"></div></div>
+          <p id="countdown5h" class="countdown" data-reset-at="">Redefinição: --</p>
+          <p id="exact5h" class="exact-time">--</p>
+        </div>
+        <span class="sprite-safe-zone" data-sprite-safe-zone aria-hidden="true"></span>
       </article>
-      <article class="usage-card" data-sprite-anchor="codex-weekly">
-        <p class="card-label" data-sprite-protected>Limite de uso semanal</p>
-        <div class="percent-row" data-sprite-protected><p id="percentWeekly" class="percent">--%</p><small>restantes</small></div>
-        <div class="progress" data-sprite-protected><div id="fillWeekly" class="fill"></div></div>
-        <p id="countdownWeekly" class="countdown" data-reset-at="" data-sprite-protected>Redefinição: --</p>
-        <p id="exactWeekly" class="exact-time" data-sprite-protected>--</p>
+      <article id="card-weekly" class="usage-card" data-sprite-anchor="codex-weekly">
+        <div class="usage-content" data-sprite-protected>
+          <p class="card-label">Limite de uso semanal</p>
+          <div class="percent-row"><p id="percentWeekly" class="percent">--%</p><small>restantes</small></div>
+          <div class="progress"><div id="fillWeekly" class="fill"></div></div>
+          <p id="countdownWeekly" class="countdown" data-reset-at="">Redefinição: --</p>
+          <p id="exactWeekly" class="exact-time">--</p>
+        </div>
+        <span class="sprite-safe-zone" data-sprite-safe-zone aria-hidden="true"></span>
       </article>
-    </section>
-
-    <section class="meta-grid">
-      <article class="meta-card" data-sprite-protected><span>Extração</span><strong id="mode">--</strong></article>
-      <article class="meta-card" data-sprite-protected><span>Estado do limite</span><strong id="limitReached">--</strong></article>
-      <article class="meta-card" data-sprite-protected><span>Atualização</span><strong id="healthStatus">--</strong></article>
     </section>
   </main>
 
@@ -123,7 +126,6 @@
         <h3>Textos e cores</h3>
         <div class="field-grid">
           <label class="field full">Nome da tela<input id="titleInput" type="text" maxlength="32" placeholder="Codex Pulse" /></label>
-          <label class="field full">Mensagem principal<input id="heroInput" type="text" maxlength="70" placeholder="Uso em tempo real." /></label>
           <label class="field">Cor principal<input id="accentInput" type="color" value="#62e8ff" /></label>
           <label class="field">Cor secundária<input id="accent2Input" type="color" value="#a875ff" /></label>
           <label class="field full">Cor de fundo<input id="bgInput" type="color" value="#090b16" /></label>
@@ -154,7 +156,7 @@
           <label class="field">Quantidade<input id="spriteCountInput" type="range" min="1" max="3" step="1" value="2" /><output id="spriteCountOutput">2</output></label>
           <label class="field">Tamanho<input id="spriteScaleInput" type="range" min="0.65" max="1.35" step="0.05" value="1" /></label>
           <label class="field">Velocidade<input id="spriteSpeedInput" type="range" min="0.55" max="1.7" step="0.05" value="1" /></label>
-          <label class="field">Intervalo de fala<input id="spriteTalkInput" type="range" min="8" max="45" step="1" value="18" /><output id="spriteTalkOutput">18s</output></label>
+          <label class="field">Intervalo mínimo de fala<input id="spriteTalkInput" type="range" min="10" max="120" step="5" value="25" /><output id="spriteTalkOutput">25s</output></label>
         </div>
         <label class="switch-field"><input id="spriteEnabledInput" type="checkbox" checked /><span></span><b>Exibir companheiros</b></label>
         <label class="switch-field"><input id="spriteSpeechInput" type="checkbox" checked /><span></span><b>Exibir falas contextuais</b></label>
@@ -166,7 +168,7 @@
 
       <section class="studio-section">
         <h3>CSS extra</h3>
-        <label class="field">Cole regras CSS para ajustes livres<textarea id="customCssInput" spellcheck="false" placeholder=".hero { border-radius: 40px; }"></textarea></label>
+        <label class="field">Cole regras CSS para ajustes livres<textarea id="customCssInput" spellcheck="false" placeholder=".usage-card { border-radius: 30px; }"></textarea></label>
         <p class="hint">As regras são aplicadas apenas neste navegador e nesta tela.</p>
       </section>
 

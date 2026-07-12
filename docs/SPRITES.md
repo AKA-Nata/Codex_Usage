@@ -4,6 +4,11 @@ O motor mantém as regras, a fila de eventos, a seleção de personagem, o
 deslocamento, a animação e a fala fora de `app.js`. A interface apenas entrega
 o contexto bruto do painel e as preferências salvas no navegador.
 
+As decisões são declaradas em `web/config/sprite-behaviors.json` e verificadas
+pelo contrato `web/config/sprite-behaviors.schema.json`. O motor carrega,
+valida, compila e interpreta essa configuração; `app.js` não contém thresholds
+nem frases de reação.
+
 ## Personagens e assets
 
 | Personagem | Asset-base | Canvas atual |
@@ -19,6 +24,10 @@ frame-base. As diferenças de estado são produzidas por transformações em
 passos, filtros e pelo elemento `.sprite-effect`; não há interpolação entre
 bitmaps. `web/assets/sprite-sheet.png` é uma composição legada dos quatro
 personagens e não é usada pelo motor.
+
+Nenhum asset bitmap foi criado na versão 4.1.0. Todos os novos estados e sinais
+visuais reaproveitam os quatro frames-base existentes por meio de CSS, mantendo
+pixels nítidos, paleta, proporção, transparência e identidade dos personagens.
 
 Se forem adicionados frames no futuro, eles devem permanecer em
 `web/assets/sprites/<personagem>/<estado>.png`, com canvas, baseline, escala e
@@ -51,13 +60,43 @@ personagem.
 
 `facing-left` espelha o frame e o efeito. `talking` controla a visibilidade do
 balão. `bubble-left`, `bubble-right` e `bubble-below` escolhem a orientação do
-balão conforme o espaço seguro no viewport. Durante `state-walk`, o personagem
-fica atrás de `.app`, mas continua com Pointer Events nas áreas em que permanece
-visível; quando há sobreposição, o conteúdo do painel, que está acima, recebe a
-interação. `dragging` sempre fica acima do painel.
+balão conforme o espaço seguro no viewport. A camada dos personagens permanece
+sempre acima dos cards, inclusive durante `walk` e `dragging`. Para preservar a
+leitura e os controles, os destinos usam zonas reservadas e a geometria do
+motor evita áreas protegidas e colisões.
 
 Estados desconhecidos ou dados visuais incompletos devem cair em `idle`, sem
 remover o personagem nem interromper o arraste.
+
+## Configuração declarativa
+
+O JSON é dividido em cinco blocos funcionais:
+
+- `metadata`: identidade, locale e versões do arquivo e do schema;
+- `macros`: dicionário de valores disponíveis para condições e frases;
+- `cards`: nomes lógicos e seletores dos destinos do painel;
+- `defaultBehavior`: velocidade, duração, descanso, movimento livre, destinos,
+  fala casual e prevenção de colisões;
+- `phrases` e `triggers`: textos reutilizáveis e regras priorizadas.
+
+Cada macro informa `token`, `origin`, `sourcePath`, `type`, `unit`, `fallback`
+e descrição. O conjunto inclui hora, data, tempo sem interação, temperatura,
+clima, CPU, RAM, disco, GPU opcional, memória de GPU opcional, percentuais e
+resets do Codex de 5 horas e semanal, flags de limite atingido, status da
+coleta e última atualização. Uma macro ausente ou inválida usa seu fallback e
+nunca injeta `undefined`, `NaN` ou uma exceção no balão.
+
+Condições aceitam os operadores `>`, `>=`, `<`, `<=`, `==` e `between`, além de
+composição por `all` e `any`. Também podem observar faixas de horário que cruzam
+a meia-noite, mudança de valor, clique em card ou sprite, fim de arraste,
+inatividade/retorno, erro ou recuperação da coleta, reset próximo e intervalo
+casual. A ação de cada gatilho define prioridade, cooldown, estado, destino,
+frase e se a reação deve permanecer enquanto a condição existir.
+
+Se o arquivo não existir ou violar o schema, a interface continua operando. O
+motor conserva a última configuração válida; na primeira carga, usa um conjunto
+legado seguro. O status da configuração registra o fallback e mensagens de
+validação compreensíveis, sem expor dados operacionais.
 
 ## Normalização e thresholds
 
@@ -72,8 +111,8 @@ Os thresholds são configuráveis. Os padrões funcionais são:
 | Codex 5h ou semanal | acima de 60% | comportamento normal e comentário discreto |
 | Codex 5h ou semanal | acima de 30% até 60% | visitar o card, `inspect`/`point` e fala curta |
 | Codex 5h ou semanal | de 10% até 30%, inclusive | `worried` e alerta moderado; 30% pertence a esta faixa |
-| Codex 5h | abaixo de 10% ou `limit_reached` | `critical`, informar reset e permanecer no card |
-| Codex semanal | abaixo de 10%; `limit_reached` global só quando o percentual de 5h estiver ausente | `critical`, informar reset e permanecer no card |
+| Codex 5h | abaixo de 10% ou flag de 5h atingido | `critical`, informar reset e permanecer no card |
+| Codex semanal | abaixo de 10% ou flag semanal atingido | `critical`, informar reset e permanecer no card |
 | Reset Codex válido | acima de zero e até 30 minutos | expectativa com `celebrate`; não substitui uma reação crítica |
 | CPU ou RAM | acima de 75% | `hot`/`worried` junto ao card da máquina |
 | CPU ou RAM | acima de 90% | `critical` junto ao card da máquina |
@@ -88,10 +127,16 @@ Os thresholds são configuráveis. Os padrões funcionais são:
 | Coleta desatualizada | prazo de `stale_after_minutes` excedido | `confused` no status |
 | Erro de coleta ou telemetria | imediatamente | `confused` próximo ao status ou ao card da máquina |
 
-O tempo de inatividade normalizado é o menor valor válido entre a atividade no
-painel e a atividade geral do sistema. Temperatura indisponível ou clima
-desativado não geram reação de frio/calor. Horário válido pode gerar saudações
-de manhã, tarde, noite ou madrugada, sempre em baixa prioridade.
+O tempo de inatividade do painel é prioritário para as reações. O tempo ocioso
+geral do Windows continua normalizado como `systemIdleSeconds`, em campo
+separado, sem encurtar nem substituir `idleSeconds`. Temperatura indisponível
+ou clima desativado não geram reação de frio/calor. Horário válido pode gerar
+saudações de manhã, tarde, noite ou madrugada, sempre em baixa prioridade.
+
+Os estados de limite atingido são calculados por janela. Quando uma fonte
+legada fornece somente uma flag global, a normalização a associa à janela
+compatível com os percentuais disponíveis, sem marcar simultaneamente os dois
+cards por engano.
 
 ## Fila, prioridades e cooldowns
 
@@ -132,28 +177,29 @@ motor só despacha nova reação automática quando não há outra reação ou b
 em apresentação. Chave e assinatura evitam repetição por polling; a seleção
 prioriza não reutilizar imediatamente o último personagem e o último assunto.
 
-## Âncoras e áreas protegidas
+## Cards, zonas seguras e áreas protegidas
 
-Destinos são localizados por `data-sprite-anchor`:
+Os nomes lógicos são resolvidos pelos seletores declarados em `cards`:
 
-- `hero`: movimento livre e mensagens gerais;
-- `status`: coleta desatualizada, falha ou telemetria inválida;
-- `clock`: hora e período do dia;
-- `idle`: inatividade, sono e retorno;
-- `weather`: temperatura e condição climática;
-- `machine`: CPU, RAM e disco;
-- `codex-5h`: limite e reset de 5 horas;
-- `codex-weekly`: limite e reset semanal.
+- `status`: coleta desatualizada, falha ou recuperação;
+- `hora`: hora e período do dia;
+- `interacao`: inatividade, sono e retorno;
+- `temperatura`: temperatura e condição climática;
+- `maquina`: CPU, RAM, disco e telemetria;
+- `codex_5h`: limite e reset de 5 horas;
+- `codex_semanal`: limite e reset semanal.
 
-Elementos com `data-sprite-protected` são obstáculos. O motor mede o corpo dos
-sprites, pontua a interseção com essas áreas, considera a distância entre
-companheiros e escolhe uma doca externa ou um canto decorativo livre do card.
-As posições são recalculadas em resize ou scroll. O tamanho do balão ainda não
-participa explicitamente da pontuação; nas bordas do viewport, `bubble-left`,
-`bubble-right` e `bubble-below` orientam o balão para a região visível. Se não
-houver espaço seguro, o personagem passa temporariamente para trás do conteúdo
-e recolhe o balão. Durante a caminhada, o sprite também passa atrás de `.app`,
-mas conserva Pointer Events onde estiver visível.
+Os quatro cards ambientais e os dois cards do Codex possuem
+`data-sprite-safe-zone`. Essas áreas decorativas são docas preferenciais, ficam
+livres de texto e controles e permitem apontar para o dado sem cobri-lo.
+Elementos com `data-sprite-protected` continuam sendo obstáculos.
+
+O motor mede o corpo dos sprites, pontua interseções, considera a distância
+entre companheiros e escolhe a zona ou doca segura de menor custo. As posições
+são recalculadas em resize e scroll e permanecem limitadas ao viewport. Nas
+bordas, `bubble-left`, `bubble-right` e `bubble-below` orientam o balão para a
+região visível. Se uma posição deixar de ser segura, o sprite é redocado; a
+camada visual não é rebaixada para ocultá-lo.
 
 ## Personalização e acessibilidade
 

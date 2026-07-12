@@ -1,10 +1,11 @@
-import { SpriteReactionEngine } from "./sprite-reaction-engine.js";
+import { SpriteReactionEngine, loadSpriteBehaviorConfig } from "./sprite-reaction-engine.js";
 
 const STORAGE_KEY = "codex-pulse-design-v2";
+const DESIGN_SCHEMA_VERSION = 3;
 const defaults = {
+  designVersion: DESIGN_SCHEMA_VERSION,
   template: "nebula",
   title: "Codex Pulse",
-  hero: "Uso em tempo real.",
   accent: "#62e8ff",
   accent2: "#a875ff",
   bg: "#090b16",
@@ -15,7 +16,7 @@ const defaults = {
   spriteCount: 2,
   spriteScale: 1,
   spriteSpeed: 1,
-  spriteTalkInterval: 18,
+  spriteTalkInterval: 25,
   spriteRoam: true,
   spriteSmart: true,
   spriteSpeech: true,
@@ -46,7 +47,6 @@ const state = {
 function byId(id) { return document.getElementById(id); }
 function validColor(value, fallback) { return /^#[0-9a-f]{6}$/i.test(value || "") ? value : fallback; }
 function cleanUrl(value) { try { return value ? new URL(value, location.href).href : ""; } catch { return ""; } }
-function escapeHtml(value) { const element = document.createElement("div"); element.textContent = value; return element.innerHTML; }
 function safePercent(value) {
   if (value === null || value === undefined || value === "" || typeof value === "boolean") return null;
   const number = Number(value);
@@ -59,7 +59,18 @@ function loadDesign() {
   try {
     const previous = JSON.parse(localStorage.getItem("codex-pulse-design-v1") || "{}");
     const current = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    return { ...defaults, ...previous, ...current };
+    const storedVersion = Number(current.designVersion ?? previous.designVersion ?? 0);
+    const merged = { ...defaults, ...previous, ...current };
+
+    // Migração única: o valor 90s era o padrão antigo e deixava o personagem
+    // inativo por muito tempo. Valores personalizados diferentes de 90s são preservados.
+    if (storedVersion < DESIGN_SCHEMA_VERSION && Number(merged.spriteTalkInterval) === 90) {
+      merged.spriteTalkInterval = defaults.spriteTalkInterval;
+    }
+
+    merged.designVersion = DESIGN_SCHEMA_VERSION;
+    delete merged.hero;
+    return merged;
   } catch {
     return { ...defaults };
   }
@@ -108,7 +119,6 @@ function applyDesign() {
   root.setProperty("--bg", validColor(d.bg, defaults.bg));
   root.setProperty("--image-url", d.imageUrl ? `url("${d.imageUrl.replaceAll('"', "%22")}")` : "none");
   byId("appTitle").textContent = d.title || defaults.title;
-  byId("heroTitle").innerHTML = escapeHtml(d.hero || defaults.hero).replace(/(tempo real|real)/i, "<em>$1</em>");
   byId("customCss").textContent = d.customCss || "";
 
   document.body.classList.toggle("has-image", Boolean(d.imageUrl));
@@ -144,7 +154,6 @@ function applyDesign() {
 function syncControls() {
   const d = state.design;
   byId("titleInput").value = d.title;
-  byId("heroInput").value = d.hero;
   byId("accentInput").value = validColor(d.accent, defaults.accent);
   byId("accent2Input").value = validColor(d.accent2, defaults.accent2);
   byId("bgInput").value = validColor(d.bg, defaults.bg);
@@ -204,10 +213,6 @@ function renderStatus() {
   byId("collectedAt").textContent = usage.collected_at
     ? `Atualizado ${new Date(usage.collected_at).toLocaleString("pt-BR")}`
     : "Ainda sem dados";
-  byId("mode").textContent = usage.extraction_mode || "--";
-  byId("limitReached").textContent = usage.limit_reached === true ? "Atingido" : usage.limit_reached === false ? "Disponível" : "Não informado";
-  byId("healthStatus").textContent = health.status || "Aguardando";
-
   const collected = parseDate(usage.collected_at);
   const stale = !collected || Date.now() - collected > Number(state.settings.stale_after_minutes || 45) * 60000;
   const badge = byId("statusBadge");
@@ -343,7 +348,8 @@ async function refreshNow() {
 }
 
 function registerHumanInteraction() {
-  state.spriteEngine?.notifyUserInteraction();
+  const previousIdleSeconds = Math.floor((Date.now() - state.lastHumanInteractionAt) / 1000);
+  state.spriteEngine?.notifyUserInteraction(previousIdleSeconds);
   state.lastHumanInteractionAt = Date.now();
 }
 
@@ -369,7 +375,7 @@ function bindEvents() {
   document.querySelectorAll("[data-template]").forEach(button => button.addEventListener("click", () => updateDesign({ template: button.dataset.template, ...templates[button.dataset.template] })));
   document.querySelectorAll(".sprite-option").forEach(button => button.addEventListener("click", () => updateDesign({ sprite: button.dataset.sprite })));
 
-  [["titleInput", "title"], ["heroInput", "hero"], ["accentInput", "accent"], ["accent2Input", "accent2"], ["bgInput", "bg"], ["customCssInput", "customCss"]]
+  [["titleInput", "title"], ["accentInput", "accent"], ["accent2Input", "accent2"], ["bgInput", "bg"], ["customCssInput", "customCss"]]
     .forEach(([id, key]) => byId(id).addEventListener("input", event => updateDesign({ [key]: event.target.value })));
 
   [["spriteCountInput", "spriteCount", Number], ["spriteScaleInput", "spriteScale", Number], ["spriteSpeedInput", "spriteSpeed", Number], ["spriteTalkInput", "spriteTalkInterval", Number]]
@@ -393,14 +399,20 @@ function bindEvents() {
   });
 }
 
-function bootstrap() {
+async function bootstrap() {
+  const behaviorReport = await loadSpriteBehaviorConfig("./config/sprite-behaviors.json");
   state.spriteEngine = new SpriteReactionEngine({
     root: byId("spriteWorld"),
     getContext: currentSpriteContext,
     onHumanInteraction: registerHumanInteraction,
+    behaviorConfig: behaviorReport.config,
+    configReport: behaviorReport,
   });
   bindEvents();
   applyDesign();
+  byId("companionBadge").title = behaviorReport.valid && !behaviorReport.usingFallback
+    ? "Comportamentos declarativos ativos"
+    : `Configuração principal indisponível; fallback seguro ativo. ${behaviorReport.issues?.[0]?.message || ""}`.trim();
   tickUi();
   setInterval(tickUi, 1000);
 
@@ -408,4 +420,7 @@ function bootstrap() {
   loadTelemetry().catch(handleTelemetryError);
 }
 
-bootstrap();
+bootstrap().catch(error => {
+  console.error("Falha ao iniciar o painel:", error);
+  setNotice(`Falha ao iniciar o painel: ${error.message}`, "error");
+});

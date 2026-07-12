@@ -43,6 +43,21 @@ class NetworkParserTests(unittest.TestCase):
         self.assertEqual(primary["limit_window_seconds"], 18000)
         self.assertEqual(secondary["limit_window_seconds"], 604800)
 
+    def test_preserves_limit_flags_for_each_window(self):
+        payload = json.loads(json.dumps(self.payload))
+        payload["rate_limit"]["primary_window"]["limit_reached"] = False
+        payload["rate_limit"]["primary_window"]["allowed"] = True
+        payload["rate_limit"]["secondary_window"]["limit_reached"] = True
+        payload["rate_limit"]["secondary_window"]["allowed"] = False
+
+        result = parse_network_payload(payload, "America/Sao_Paulo", "network_observed")
+        five_hour = result["resets"]["limite_5h"]
+        weekly = result["resets"]["limite_semanal"]
+        self.assertFalse(five_hour["limit_reached"])
+        self.assertTrue(five_hour["allowed"])
+        self.assertTrue(weekly["limit_reached"])
+        self.assertFalse(weekly["allowed"])
+
 
 class DomParserTests(unittest.TestCase):
     def test_parses_cards_from_body_text(self):

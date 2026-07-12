@@ -1,0 +1,1000 @@
+{
+  "$schema": "./sprite-behaviors.schema.json",
+  "metadata": {
+    "id": "codex-dashboard-sprite-behaviors",
+    "version": "1.0.0",
+    "schemaVersion": "1.0.0",
+    "locale": "pt-BR",
+    "description": "Comportamentos declarativos dos sprites do painel Codex."
+  },
+  "macros": {
+    "hora": {
+      "token": "{{hora}}",
+      "origin": "relógio do painel",
+      "sourcePath": "clock.time",
+      "type": "string",
+      "unit": "",
+      "fallback": "horário indisponível",
+      "description": "Hora local formatada."
+    },
+    "data": {
+      "token": "{{data}}",
+      "origin": "relógio do painel",
+      "sourcePath": "clock.date",
+      "type": "string",
+      "unit": "",
+      "fallback": "data indisponível",
+      "description": "Data local formatada."
+    },
+    "tempo_sem_interacao": {
+      "token": "{{tempo_sem_interacao}}",
+      "origin": "interação no painel",
+      "sourcePath": "idleSeconds",
+      "type": "duration",
+      "unit": "s",
+      "fallback": "tempo indisponível",
+      "description": "Tempo desde a última interação do usuário no painel."
+    },
+    "temperatura": {
+      "token": "{{temperatura}}",
+      "origin": "telemetria de clima",
+      "sourcePath": "weather.temperatureC",
+      "type": "number",
+      "unit": "°C",
+      "fallback": "temperatura indisponível",
+      "description": "Temperatura externa atual."
+    },
+    "clima": {
+      "token": "{{clima}}",
+      "origin": "telemetria de clima",
+      "sourcePath": "weather.condition",
+      "type": "string",
+      "unit": "",
+      "fallback": "clima indisponível",
+      "description": "Descrição da condição climática."
+    },
+    "cpu": {
+      "token": "{{cpu}}",
+      "origin": "telemetria da máquina",
+      "sourcePath": "machine.cpuPercent",
+      "type": "number",
+      "unit": "%",
+      "fallback": "CPU indisponível",
+      "description": "Uso atual de CPU."
+    },
+    "ram": {
+      "token": "{{ram}}",
+      "origin": "telemetria da máquina",
+      "sourcePath": "machine.memoryPercent",
+      "type": "number",
+      "unit": "%",
+      "fallback": "RAM indisponível",
+      "description": "Uso atual de memória RAM."
+    },
+    "disco": {
+      "token": "{{disco}}",
+      "origin": "telemetria da máquina",
+      "sourcePath": "machine.diskPercent",
+      "type": "number",
+      "unit": "%",
+      "fallback": "disco indisponível",
+      "description": "Uso atual do disco principal."
+    },
+    "gpu": {
+      "token": "{{gpu}}",
+      "origin": "telemetria opcional da máquina via nvidia-smi",
+      "sourcePath": "machine.gpuPercent",
+      "type": "number",
+      "unit": "%",
+      "fallback": "GPU indisponível",
+      "description": "Uso máximo das GPUs NVIDIA quando nvidia-smi estiver disponível."
+    },
+    "gpu_memoria": {
+      "token": "{{gpu_memoria}}",
+      "origin": "telemetria opcional da máquina via nvidia-smi",
+      "sourcePath": "machine.gpuMemoryPercent",
+      "type": "number",
+      "unit": "%",
+      "fallback": "memória da GPU indisponível",
+      "description": "Uso agregado da memória das GPUs NVIDIA quando disponível."
+    },
+    "codex_5h_percentual": {
+      "token": "{{codex_5h_percentual}}",
+      "origin": "coleta CDP do Codex",
+      "sourcePath": "codex.fiveHourPercent",
+      "type": "number",
+      "unit": "%",
+      "fallback": "limite de 5h indisponível",
+      "description": "Percentual restante na janela de cinco horas."
+    },
+    "codex_5h_reset": {
+      "token": "{{codex_5h_reset}}",
+      "origin": "coleta CDP do Codex",
+      "sourcePath": "codex.fiveHourResetSeconds",
+      "type": "duration",
+      "unit": "s",
+      "fallback": "reset de 5h indisponível",
+      "description": "Tempo restante até o reset da janela de cinco horas."
+    },
+    "codex_5h_atingido": {
+      "token": "{{codex_5h_atingido}}",
+      "origin": "coleta CDP do Codex",
+      "sourcePath": "codex.fiveHourLimitReached",
+      "type": "boolean",
+      "unit": "",
+      "fallback": false,
+      "description": "Indica se o limite de cinco horas foi atingido."
+    },
+    "codex_semanal_percentual": {
+      "token": "{{codex_semanal_percentual}}",
+      "origin": "coleta CDP do Codex",
+      "sourcePath": "codex.weeklyPercent",
+      "type": "number",
+      "unit": "%",
+      "fallback": "limite semanal indisponível",
+      "description": "Percentual restante no limite semanal."
+    },
+    "codex_semanal_reset": {
+      "token": "{{codex_semanal_reset}}",
+      "origin": "coleta CDP do Codex",
+      "sourcePath": "codex.weeklyResetSeconds",
+      "type": "duration",
+      "unit": "s",
+      "fallback": "reset semanal indisponível",
+      "description": "Tempo restante até o reset semanal."
+    },
+    "codex_semanal_atingido": {
+      "token": "{{codex_semanal_atingido}}",
+      "origin": "coleta CDP do Codex",
+      "sourcePath": "codex.weeklyLimitReached",
+      "type": "boolean",
+      "unit": "",
+      "fallback": false,
+      "description": "Indica se o limite semanal foi atingido."
+    },
+    "coleta_status": {
+      "token": "{{coleta_status}}",
+      "origin": "saúde da coleta",
+      "sourcePath": "collection.status",
+      "type": "string",
+      "unit": "",
+      "fallback": "status indisponível",
+      "description": "Estado atual da coleta de dados."
+    },
+    "ultima_atualizacao": {
+      "token": "{{ultima_atualizacao}}",
+      "origin": "saúde da coleta",
+      "sourcePath": "collection.collectedAtMs",
+      "type": "datetime",
+      "unit": "",
+      "fallback": "atualização indisponível",
+      "description": "Data e hora da última coleta válida."
+    }
+  },
+  "cards": {
+    "hora": "#card-clock",
+    "interacao": "#card-idle",
+    "temperatura": "#card-weather",
+    "maquina": "#card-machine",
+    "codex_5h": "#card-five-hour",
+    "codex_semanal": "#card-weekly",
+    "status": "#statusBadge"
+  },
+  "defaultBehavior": {
+    "enabled": true,
+    "initialState": "idle",
+    "speed": 70,
+    "reactionDurationSeconds": 4,
+    "walkDurationSeconds": {
+      "min": 2,
+      "max": 6
+    },
+    "restDurationSeconds": {
+      "min": 2,
+      "max": 5
+    },
+    "actionIntervalSeconds": {
+      "min": 5,
+      "max": 12
+    },
+    "allowedDestinations": [
+      "hora",
+      "interacao",
+      "temperatura",
+      "maquina",
+      "codex_5h",
+      "codex_semanal"
+    ],
+    "casualSpeech": {
+      "enabled": true,
+      "intervalSeconds": {
+        "min": 20,
+        "max": 45
+      },
+      "phraseIds": [
+        "casual_hora",
+        "casual_clima",
+        "casual_maquina",
+        "casual_codex"
+      ]
+    },
+    "features": {
+      "reactions": true,
+      "movement": true,
+      "speech": true
+    },
+    "coordination": {
+      "maxConcurrentReactions": 1,
+      "duplicatePhraseWindowSeconds": 30,
+      "minimumSpriteGapPixels": 12
+    },
+    "motion": {
+      "returnToFreeRoam": true,
+      "avoidCollisions": true,
+      "respectViewport": true,
+      "preserveDrag": true,
+      "safePlacement": "safe-area",
+      "reducedMotion": {
+        "honorPreference": true,
+        "disableWalking": true,
+        "reactionDurationSeconds": 5
+      }
+    }
+  },
+  "phrases": [
+    {
+      "id": "casual_hora",
+      "texts": [
+        "Agora são {{hora}}.",
+        "Hoje é {{data}}."
+      ],
+      "weight": 1
+    },
+    {
+      "id": "casual_clima",
+      "texts": [
+        "Clima: {{clima}}.",
+        "Temperatura: {{temperatura}}°C."
+      ],
+      "weight": 1
+    },
+    {
+      "id": "casual_maquina",
+      "texts": [
+        "CPU: {{cpu}}%. RAM: {{ram}}%.",
+        "Disco: {{disco}}%."
+      ],
+      "weight": 1
+    },
+    {
+      "id": "casual_codex",
+      "texts": [
+        "Janela de 5h: {{codex_5h_percentual}}%.",
+        "Semanal: {{codex_semanal_percentual}}%."
+      ],
+      "weight": 1
+    }
+  ],
+  "triggers": [
+    {
+      "id": "codex_5h_normal",
+      "enabled": true,
+      "when": {
+        "metric": "codex_5h_percentual",
+        "operator": ">",
+        "value": 60
+      },
+      "targetCard": "codex_5h",
+      "spriteState": "happy",
+      "phrases": [
+        "Janela de 5h tranquila: {{codex_5h_percentual}}%."
+      ],
+      "priority": 20,
+      "cooldownSeconds": 900
+    },
+    {
+      "id": "codex_5h_visita",
+      "enabled": true,
+      "when": {
+        "all": [
+          {
+            "metric": "codex_5h_percentual",
+            "operator": ">",
+            "value": 30
+          },
+          {
+            "metric": "codex_5h_percentual",
+            "operator": "<=",
+            "value": 60
+          }
+        ]
+      },
+      "targetCard": "codex_5h",
+      "spriteState": "inspect",
+      "phrases": [
+        "Janela de 5h: {{codex_5h_percentual}}%. Estou de olho."
+      ],
+      "priority": 65,
+      "cooldownSeconds": 240
+    },
+    {
+      "id": "codex_5h_preocupado",
+      "enabled": true,
+      "when": {
+        "metric": "codex_5h_percentual",
+        "operator": "between",
+        "value": [
+          10,
+          30
+        ]
+      },
+      "targetCard": "codex_5h",
+      "spriteState": "worried",
+      "phrases": [
+        "Restam {{codex_5h_percentual}}% na janela de 5h."
+      ],
+      "priority": 90,
+      "cooldownSeconds": 180
+    },
+    {
+      "id": "codex_5h_critico",
+      "enabled": true,
+      "when": {
+        "any": [
+          {
+            "metric": "codex_5h_percentual",
+            "operator": "<",
+            "value": 10
+          },
+          {
+            "metric": "codex_5h_atingido",
+            "operator": "==",
+            "value": true
+          }
+        ]
+      },
+      "targetCard": "codex_5h",
+      "spriteState": "critical",
+      "phrases": [
+        "Janela de 5h crítica. Reset: {{codex_5h_reset}}."
+      ],
+      "priority": 110,
+      "cooldownSeconds": 90,
+      "persistent": true,
+      "holdSeconds": 5
+    },
+    {
+      "id": "codex_5h_reset_proximo",
+      "enabled": true,
+      "when": {
+        "all": [
+          {
+            "metric": "codex_5h_reset",
+            "operator": ">",
+            "value": 0
+          },
+          {
+            "metric": "codex_5h_reset",
+            "operator": "<=",
+            "value": 1800
+          }
+        ]
+      },
+      "targetCard": "codex_5h",
+      "spriteState": "celebrate",
+      "phrases": [
+        "Reset de 5h em {{codex_5h_reset}}. Quase lá!"
+      ],
+      "priority": 105,
+      "cooldownSeconds": 120
+    },
+    {
+      "id": "codex_semanal_normal",
+      "enabled": true,
+      "when": {
+        "metric": "codex_semanal_percentual",
+        "operator": ">",
+        "value": 60
+      },
+      "targetCard": "codex_semanal",
+      "spriteState": "happy",
+      "phrases": [
+        "Limite semanal tranquilo: {{codex_semanal_percentual}}%."
+      ],
+      "priority": 18,
+      "cooldownSeconds": 900
+    },
+    {
+      "id": "codex_semanal_visita",
+      "enabled": true,
+      "when": {
+        "all": [
+          {
+            "metric": "codex_semanal_percentual",
+            "operator": ">",
+            "value": 30
+          },
+          {
+            "metric": "codex_semanal_percentual",
+            "operator": "<=",
+            "value": 60
+          }
+        ]
+      },
+      "targetCard": "codex_semanal",
+      "spriteState": "inspect",
+      "phrases": [
+        "Semanal: {{codex_semanal_percentual}}%. Vou acompanhar."
+      ],
+      "priority": 63,
+      "cooldownSeconds": 240
+    },
+    {
+      "id": "codex_semanal_preocupado",
+      "enabled": true,
+      "when": {
+        "metric": "codex_semanal_percentual",
+        "operator": "between",
+        "value": [
+          10,
+          30
+        ]
+      },
+      "targetCard": "codex_semanal",
+      "spriteState": "worried",
+      "phrases": [
+        "Restam {{codex_semanal_percentual}}% no semanal."
+      ],
+      "priority": 88,
+      "cooldownSeconds": 180
+    },
+    {
+      "id": "codex_semanal_critico",
+      "enabled": true,
+      "when": {
+        "any": [
+          {
+            "metric": "codex_semanal_percentual",
+            "operator": "<",
+            "value": 10
+          },
+          {
+            "metric": "codex_semanal_atingido",
+            "operator": "==",
+            "value": true
+          }
+        ]
+      },
+      "targetCard": "codex_semanal",
+      "spriteState": "critical",
+      "phrases": [
+        "Semanal crítico. Reset: {{codex_semanal_reset}}."
+      ],
+      "priority": 108,
+      "cooldownSeconds": 90,
+      "persistent": true,
+      "holdSeconds": 5
+    },
+    {
+      "id": "codex_semanal_reset_proximo",
+      "enabled": true,
+      "when": {
+        "all": [
+          {
+            "metric": "codex_semanal_reset",
+            "operator": ">",
+            "value": 0
+          },
+          {
+            "metric": "codex_semanal_reset",
+            "operator": "<=",
+            "value": 1800
+          }
+        ]
+      },
+      "targetCard": "codex_semanal",
+      "spriteState": "celebrate",
+      "phrases": [
+        "Reset semanal em {{codex_semanal_reset}}. Quase lá!"
+      ],
+      "priority": 103,
+      "cooldownSeconds": 120
+    },
+    {
+      "id": "cpu_alta",
+      "enabled": true,
+      "when": {
+        "all": [
+          {
+            "metric": "cpu",
+            "operator": ">",
+            "value": 75
+          },
+          {
+            "metric": "cpu",
+            "operator": "<=",
+            "value": 90
+          }
+        ]
+      },
+      "targetCard": "maquina",
+      "spriteState": "hot",
+      "phrases": [
+        "CPU: {{cpu}}%. Está puxado."
+      ],
+      "priority": 82,
+      "cooldownSeconds": 300
+    },
+    {
+      "id": "cpu_critica",
+      "enabled": true,
+      "when": {
+        "metric": "cpu",
+        "operator": ">",
+        "value": 90
+      },
+      "targetCard": "maquina",
+      "spriteState": "critical",
+      "phrases": [
+        "CPU crítica: {{cpu}}%."
+      ],
+      "priority": 104,
+      "cooldownSeconds": 120,
+      "persistent": true,
+      "holdSeconds": 5
+    },
+    {
+      "id": "ram_alta",
+      "enabled": true,
+      "when": {
+        "all": [
+          {
+            "metric": "ram",
+            "operator": ">",
+            "value": 75
+          },
+          {
+            "metric": "ram",
+            "operator": "<=",
+            "value": 90
+          }
+        ]
+      },
+      "targetCard": "maquina",
+      "spriteState": "hot",
+      "phrases": [
+        "RAM: {{ram}}%. Está pesado."
+      ],
+      "priority": 81,
+      "cooldownSeconds": 300
+    },
+    {
+      "id": "ram_critica",
+      "enabled": true,
+      "when": {
+        "metric": "ram",
+        "operator": ">",
+        "value": 90
+      },
+      "targetCard": "maquina",
+      "spriteState": "critical",
+      "phrases": [
+        "RAM crítica: {{ram}}%."
+      ],
+      "priority": 103,
+      "cooldownSeconds": 120,
+      "persistent": true,
+      "holdSeconds": 5
+    },
+    {
+      "id": "disco_alto",
+      "enabled": true,
+      "when": {
+        "all": [
+          {
+            "metric": "disco",
+            "operator": ">",
+            "value": 85
+          },
+          {
+            "metric": "disco",
+            "operator": "<=",
+            "value": 95
+          }
+        ]
+      },
+      "targetCard": "maquina",
+      "spriteState": "worried",
+      "phrases": [
+        "Disco: {{disco}}%. Pouco espaço."
+      ],
+      "priority": 80,
+      "cooldownSeconds": 300
+    },
+    {
+      "id": "disco_critico",
+      "enabled": true,
+      "when": {
+        "metric": "disco",
+        "operator": ">",
+        "value": 95
+      },
+      "targetCard": "maquina",
+      "spriteState": "critical",
+      "phrases": [
+        "Disco crítico: {{disco}}%."
+      ],
+      "priority": 102,
+      "cooldownSeconds": 120,
+      "persistent": true,
+      "holdSeconds": 5
+    },
+    {
+      "id": "temperatura_baixa",
+      "enabled": true,
+      "when": {
+        "metric": "temperatura",
+        "operator": "<=",
+        "value": 12
+      },
+      "targetCard": "temperatura",
+      "spriteState": "cold",
+      "phrases": [
+        "Temperatura: {{temperatura}}°C. Que frio!"
+      ],
+      "priority": 58,
+      "cooldownSeconds": 300
+    },
+    {
+      "id": "temperatura_alta",
+      "enabled": true,
+      "when": {
+        "metric": "temperatura",
+        "operator": ">=",
+        "value": 30
+      },
+      "targetCard": "temperatura",
+      "spriteState": "hot",
+      "phrases": [
+        "Temperatura: {{temperatura}}°C. Que calor!"
+      ],
+      "priority": 59,
+      "cooldownSeconds": 300
+    },
+    {
+      "id": "chuva",
+      "enabled": true,
+      "when": {
+        "metric": "weather.raining",
+        "operator": "==",
+        "value": true
+      },
+      "targetCard": "temperatura",
+      "spriteState": "worried",
+      "phrases": [
+        "Clima: {{clima}}. Melhor se abrigar."
+      ],
+      "priority": 61,
+      "cooldownSeconds": 300
+    },
+    {
+      "id": "inatividade_moderada",
+      "enabled": true,
+      "when": {
+        "all": [
+          {
+            "metric": "tempo_sem_interacao",
+            "operator": ">=",
+            "value": 300
+          },
+          {
+            "metric": "tempo_sem_interacao",
+            "operator": "<",
+            "value": 900
+          }
+        ]
+      },
+      "targetCard": "interacao",
+      "spriteState": "idle",
+      "phrases": [
+        "Sem interação há {{tempo_sem_interacao}}."
+      ],
+      "priority": 40,
+      "cooldownSeconds": 300
+    },
+    {
+      "id": "inatividade_sono",
+      "enabled": true,
+      "when": {
+        "metric": "tempo_sem_interacao",
+        "operator": ">=",
+        "value": 900
+      },
+      "targetCard": "interacao",
+      "spriteState": "sleep",
+      "phrases": [
+        "Vou descansar um pouco."
+      ],
+      "priority": 48,
+      "cooldownSeconds": 600,
+      "persistent": true,
+      "holdSeconds": 8
+    },
+    {
+      "id": "retorno_usuario",
+      "enabled": true,
+      "when": {
+        "all": [
+          {
+            "event": {
+              "type": "user_return"
+            }
+          },
+          {
+            "metric": "tempo_sem_interacao",
+            "operator": ">=",
+            "value": 300
+          }
+        ]
+      },
+      "targetCard": "interacao",
+      "spriteState": "wake",
+      "phrases": [
+        "Você voltou! Olá!"
+      ],
+      "priority": 96,
+      "cooldownSeconds": 30
+    },
+    {
+      "id": "coleta_erro",
+      "enabled": true,
+      "when": {
+        "event": {
+          "type": "collection_error"
+        }
+      },
+      "targetCard": "status",
+      "spriteState": "confused",
+      "phrases": [
+        "Coleta: {{coleta_status}}. Vou conferir."
+      ],
+      "priority": 120,
+      "cooldownSeconds": 60,
+      "persistent": true,
+      "holdSeconds": 8
+    },
+    {
+      "id": "coleta_desatualizada",
+      "enabled": true,
+      "when": {
+        "event": {
+          "type": "collection_stale"
+        }
+      },
+      "targetCard": "status",
+      "spriteState": "confused",
+      "phrases": [
+        "Última atualização: {{ultima_atualizacao}}."
+      ],
+      "priority": 115,
+      "cooldownSeconds": 120,
+      "persistent": true,
+      "holdSeconds": 7
+    },
+    {
+      "id": "coleta_aguardando",
+      "enabled": true,
+      "when": {
+        "metric": "collection.missing",
+        "operator": "==",
+        "value": true
+      },
+      "targetCard": "status",
+      "spriteState": "confused",
+      "phrases": [
+        "Ainda não encontrei uma coleta válida."
+      ],
+      "priority": 112,
+      "cooldownSeconds": 120,
+      "persistent": true,
+      "holdSeconds": 7
+    },
+    {
+      "id": "coleta_recuperada",
+      "enabled": true,
+      "when": {
+        "event": {
+          "type": "collection_recovery"
+        }
+      },
+      "targetCard": "status",
+      "spriteState": "celebrate",
+      "phrases": [
+        "Coleta recuperada!"
+      ],
+      "priority": 100,
+      "cooldownSeconds": 60
+    },
+    {
+      "id": "telemetria_indisponivel",
+      "enabled": true,
+      "when": {
+        "metric": "telemetry.error",
+        "operator": "==",
+        "value": true
+      },
+      "targetCard": "status",
+      "spriteState": "confused",
+      "phrases": [
+        "A telemetria local ficou indisponível."
+      ],
+      "priority": 107,
+      "cooldownSeconds": 120,
+      "persistent": true,
+      "holdSeconds": 7
+    },
+    {
+      "id": "maquina_indisponivel",
+      "enabled": true,
+      "when": {
+        "metric": "telemetry.machineUnavailable",
+        "operator": "==",
+        "value": true
+      },
+      "targetCard": "maquina",
+      "spriteState": "confused",
+      "phrases": [
+        "Não consigo ler CPU, RAM e disco agora."
+      ],
+      "priority": 72,
+      "cooldownSeconds": 120
+    },
+    {
+      "id": "faixa_manha",
+      "enabled": true,
+      "when": {
+        "timeRange": {
+          "start": "06:00",
+          "end": "11:59"
+        }
+      },
+      "targetCard": "hora",
+      "spriteState": "happy",
+      "phrases": [
+        "Bom dia! Agora são {{hora}}."
+      ],
+      "priority": 25,
+      "cooldownSeconds": 14400
+    },
+    {
+      "id": "faixa_noturna",
+      "enabled": true,
+      "when": {
+        "timeRange": {
+          "start": "22:00",
+          "end": "04:59"
+        }
+      },
+      "targetCard": "hora",
+      "spriteState": "sleep",
+      "phrases": [
+        "Já são {{hora}}. Hora de desacelerar."
+      ],
+      "priority": 26,
+      "cooldownSeconds": 14400
+    },
+    {
+      "id": "mudanca_hora",
+      "enabled": true,
+      "when": {
+        "event": {
+          "type": "value_change",
+          "metric": "hora",
+          "minIntervalSeconds": 3600
+        }
+      },
+      "targetCard": "hora",
+      "spriteState": "point",
+      "phrases": [
+        "Agora são {{hora}}."
+      ],
+      "priority": 24,
+      "cooldownSeconds": 3600
+    },
+    {
+      "id": "mudanca_temperatura",
+      "enabled": true,
+      "when": {
+        "event": {
+          "type": "value_change",
+          "metric": "temperatura",
+          "minDelta": 2
+        }
+      },
+      "targetCard": "temperatura",
+      "spriteState": "inspect",
+      "phrases": [
+        "A temperatura mudou: {{temperatura}}°C."
+      ],
+      "priority": 44,
+      "cooldownSeconds": 300
+    },
+    {
+      "id": "clique_card_maquina",
+      "enabled": true,
+      "when": {
+        "event": {
+          "type": "click",
+          "card": "maquina"
+        }
+      },
+      "targetCard": "maquina",
+      "spriteState": "point",
+      "phrases": [
+        "CPU {{cpu}}%, RAM {{ram}}%, disco {{disco}}%."
+      ],
+      "priority": 35,
+      "cooldownSeconds": 30
+    },
+    {
+      "id": "clique_sprite",
+      "enabled": true,
+      "when": {
+        "event": {
+          "type": "click",
+          "card": "sprite"
+        }
+      },
+      "targetCard": "interacao",
+      "spriteState": "happy",
+      "phrases": [
+        "Olá! Sigo de olho no painel."
+      ],
+      "priority": 36,
+      "cooldownSeconds": 20
+    },
+    {
+      "id": "fim_arraste_sprite",
+      "enabled": true,
+      "when": {
+        "event": {
+          "type": "drag",
+          "phase": "end"
+        }
+      },
+      "targetCard": "interacao",
+      "spriteState": "happy",
+      "phrases": [
+        "Novo lugar, gostei!"
+      ],
+      "priority": 30,
+      "cooldownSeconds": 20
+    },
+    {
+      "id": "intervalo_casual",
+      "enabled": true,
+      "when": {
+        "event": {
+          "type": "random_interval",
+          "intervalSeconds": {
+            "min": 20,
+            "max": 45
+          }
+        }
+      },
+      "targetCard": "hora",
+      "spriteState": "talk",
+      "phrases": [
+        "Tudo tranquilo por aqui."
+      ],
+      "phraseRefs": [
+        "casual_hora",
+        "casual_clima",
+        "casual_maquina",
+        "casual_codex"
+      ],
+      "priority": 10,
+      "cooldownSeconds": 20
+    }
+  ]
+}

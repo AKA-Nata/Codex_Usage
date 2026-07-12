@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import csv
 import ctypes
+import io
 import json
 import platform
+import shutil
+import subprocess
 import threading
 import time
 import urllib.parse
@@ -85,6 +89,139 @@ def _gb(value: Any) -> float | None:
         return None
 
 
+def _bounded_percent(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not 0 <= number <= 100:
+        return None
+    return round(number, 1)
+
+
+def _capacity_metrics(
+    used_bytes: Any,
+    total_bytes: Any,
+    *,
+    maximum_total_gb: float,
+) -> tuple[float | None, float | None, float | None]:
+    """Normaliza capacidade e descarta valores impossíveis retornados pelo SO."""
+
+    try:
+        used = float(used_bytes)
+        total = float(total_bytes)
+    except (TypeError, ValueError):
+        return None, None, None
+
+    if total <= 0 or used < 0 or used > total:
+        return None, None, None
+
+    total_gb = total / (1024 ** 3)
+    if total_gb > maximum_total_gb:
+        return None, None, None
+
+    used_gb = used / (1024 ** 3)
+    return round(used_gb, 1), round(total_gb, 1), round((used / total) * 100, 1)
+
+
+def get_gpu_metrics() -> dict[str, Any]:
+    """Obtém métricas de GPUs NVIDIA quando ``nvidia-smi`` estiver disponível."""
+
+    executable = shutil.which("nvidia-smi")
+    if not executable:
+        return {
+            "status": "unavailable",
+            "message": "nvidia-smi não encontrado",
+            "name": None,
+            "gpu_percent": None,
+            "gpu_memory_percent": None,
+        }
+
+    command = [
+        executable,
+        "--query-gpu=name,utilization.gpu,memory.used,memory.total",
+        "--format=csv,noheader,nounits",
+    ]
+    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=3,
+            check=False,
+            encoding="utf-8",
+            errors="replace",
+            creationflags=creationflags,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {
+            "status": "error",
+            "message": str(exc),
+            "name": None,
+            "gpu_percent": None,
+            "gpu_memory_percent": None,
+        }
+
+    if result.returncode != 0:
+        message = (result.stderr or result.stdout or "nvidia-smi retornou erro").strip()
+        return {
+            "status": "error",
+            "message": message[:300],
+            "name": None,
+            "gpu_percent": None,
+            "gpu_memory_percent": None,
+        }
+
+    devices: list[dict[str, Any]] = []
+    for row in csv.reader(io.StringIO(result.stdout)):
+        if len(row) < 4:
+            continue
+        name = row[0].strip()
+        gpu_percent = _bounded_percent(row[1].strip())
+        try:
+            memory_used_mb = float(row[2].strip())
+            memory_total_mb = float(row[3].strip())
+        except (TypeError, ValueError):
+            continue
+        if memory_total_mb <= 0 or memory_used_mb < 0 or memory_used_mb > memory_total_mb:
+            memory_percent = None
+        else:
+            memory_percent = round((memory_used_mb / memory_total_mb) * 100, 1)
+        devices.append(
+            {
+                "name": name or "GPU NVIDIA",
+                "gpu_percent": gpu_percent,
+                "memory_used_mb": round(memory_used_mb, 1),
+                "memory_total_mb": round(memory_total_mb, 1),
+                "gpu_memory_percent": memory_percent,
+            }
+        )
+
+    if not devices:
+        return {
+            "status": "error",
+            "message": "nvidia-smi não retornou métricas válidas",
+            "name": None,
+            "gpu_percent": None,
+            "gpu_memory_percent": None,
+        }
+
+    valid_usage = [item["gpu_percent"] for item in devices if item["gpu_percent"] is not None]
+    total_memory = sum(item["memory_total_mb"] for item in devices)
+    used_memory = sum(item["memory_used_mb"] for item in devices)
+    memory_percent = round((used_memory / total_memory) * 100, 1) if total_memory > 0 else None
+
+    return {
+        "status": "ok",
+        "name": ", ".join(dict.fromkeys(item["name"] for item in devices)),
+        "gpu_percent": max(valid_usage) if valid_usage else None,
+        "gpu_memory_percent": memory_percent,
+        "devices": devices,
+    }
+
+
 def get_windows_idle_seconds() -> float | None:
     """Retorna o tempo sem entrada no Windows, sem instalar hooks globais."""
 
@@ -106,6 +243,14 @@ def get_windows_idle_seconds() -> float | None:
 
 
 def get_machine_metrics() -> dict[str, Any]:
+    gpu = get_gpu_metrics()
+    gpu_fields = {
+        "gpu_status": gpu.get("status"),
+        "gpu_name": gpu.get("name"),
+        "gpu_percent": gpu.get("gpu_percent"),
+        "gpu_memory_percent": gpu.get("gpu_memory_percent"),
+    }
+
     if psutil is None:
         return {
             "status": "unavailable",
@@ -113,20 +258,41 @@ def get_machine_metrics() -> dict[str, Any]:
             "cpu_percent": None,
             "memory_percent": None,
             "disk_percent": None,
+            "system_idle_seconds": get_windows_idle_seconds(),
+            **gpu_fields,
         }
 
     try:
-        cpu_percent = round(float(psutil.cpu_percent(interval=0.12)), 1)
+        warnings: list[str] = []
+        cpu_percent = _bounded_percent(psutil.cpu_percent(interval=0.12))
+        if cpu_percent is None:
+            warnings.append("CPU retornou percentual inválido")
+
         memory = psutil.virtual_memory()
+        memory_used_gb, memory_total_gb, memory_percent = _capacity_metrics(
+            memory.used,
+            memory.total,
+            maximum_total_gb=1_000_000,
+        )
+        if memory_percent is None:
+            warnings.append("Memória retornou capacidade inválida")
+
         disk_root = Path.home().anchor or str(BASE_DIR.anchor or BASE_DIR)
         disk = psutil.disk_usage(disk_root)
+        disk_used_gb, disk_total_gb, disk_percent = _capacity_metrics(
+            disk.used,
+            disk.total,
+            maximum_total_gb=10_000_000,
+        )
+        if disk_percent is None:
+            warnings.append("Disco retornou capacidade inválida")
 
         battery = None
         try:
             raw_battery = psutil.sensors_battery()
             if raw_battery is not None:
                 battery = {
-                    "percent": _round_or_none(raw_battery.percent),
+                    "percent": _bounded_percent(raw_battery.percent),
                     "plugged": bool(raw_battery.power_plugged),
                     "seconds_left": None if raw_battery.secsleft in {-1, -2} else raw_battery.secsleft,
                 }
@@ -134,17 +300,19 @@ def get_machine_metrics() -> dict[str, Any]:
             battery = None
 
         return {
-            "status": "ok",
+            "status": "partial" if warnings else "ok",
+            "message": "; ".join(warnings) if warnings else None,
             "cpu_percent": cpu_percent,
             "cpu_count_logical": psutil.cpu_count(logical=True),
-            "memory_percent": round(float(memory.percent), 1),
-            "memory_used_gb": _gb(memory.used),
-            "memory_total_gb": _gb(memory.total),
-            "disk_percent": round(float(disk.percent), 1),
-            "disk_used_gb": _gb(disk.used),
-            "disk_total_gb": _gb(disk.total),
+            "memory_percent": memory_percent,
+            "memory_used_gb": memory_used_gb,
+            "memory_total_gb": memory_total_gb,
+            "disk_percent": disk_percent,
+            "disk_used_gb": disk_used_gb,
+            "disk_total_gb": disk_total_gb,
             "battery": battery,
             "system_idle_seconds": get_windows_idle_seconds(),
+            **gpu_fields,
         }
     except Exception as exc:
         return {
@@ -154,6 +322,7 @@ def get_machine_metrics() -> dict[str, Any]:
             "memory_percent": None,
             "disk_percent": None,
             "system_idle_seconds": get_windows_idle_seconds(),
+            **gpu_fields,
         }
 
 
@@ -215,7 +384,7 @@ def get_weather(weather_config: dict[str, Any] | None) -> dict[str, Any]:
     url = _build_weather_url(config)
     request = urllib.request.Request(
         url,
-        headers={"User-Agent": "CodexUsageMonitor/4.0.1 local-dashboard"},
+        headers={"User-Agent": "CodexUsageMonitor/4.1.1 local-dashboard"},
         method="GET",
     )
 

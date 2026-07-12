@@ -9,3 +9,17 @@ Edge dedicado quando nao estiver usando o monitor.
 
 O painel tambem escuta somente no loopback por padrao. Nao habilite acesso remoto
 sem autenticacao, firewall e uma necessidade explicita.
+
+## Empacotamento seguro
+
+Não use `Compress-Archive` sobre a raiz inteira do projeto. Esse procedimento pode
+incluir `.git`, perfis do Edge, cookies, histórico, logs e JSONs operacionais.
+
+Depois de validar e criar o commit, gere o pacote com:
+
+```powershell
+.\scripts\package_source.ps1
+```
+
+O script exige worktree limpo e usa `git archive HEAD`, incluindo somente
+arquivos versionados no commit atual.

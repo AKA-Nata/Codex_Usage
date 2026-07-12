@@ -407,6 +407,38 @@ function Test-Toggles {
     Wait-CdpCondition "document.querySelectorAll('.sprite-companion.talking').length === 1" 4500
     $BubbleCount = [int] (Invoke-CdpExpression "document.querySelectorAll('.sprite-companion.talking').length")
     Assert-Condition ($BubbleCount -le 1) "Mais de um balão foi exibido após habilitar reações."
+    $BubbleGeometry = Invoke-CdpExpression @'
+(() => {
+  const bubble = document.querySelector(".sprite-companion.talking .sprite-bubble");
+  if (!bubble) return { total: 0, bubble: null, overlaps: [] };
+  const bubbleRect = bubble.getBoundingClientRect();
+  const overlap = (left, right) => Math.max(0, Math.min(left.right, right.right) - Math.max(left.left, right.left))
+    * Math.max(0, Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top));
+  const overlaps = [...document.querySelectorAll("[data-sprite-protected], .progress, .machine-bars")]
+    .filter(element => !document.getElementById("spriteWorld").contains(element))
+    .map(element => ({
+      selector: element.id ? `#${element.id}` : element.className,
+      area: overlap(bubbleRect, element.getBoundingClientRect()),
+    }))
+    .filter(item => item.area > 0.5);
+  return {
+    total: overlaps.reduce((total, item) => total + item.area, 0),
+    bubble: { left: bubbleRect.left, top: bubbleRect.top, right: bubbleRect.right, bottom: bubbleRect.bottom },
+    placement: {
+      spriteClass: bubble.closest(".sprite-companion").className,
+      shiftX: getComputedStyle(bubble.closest(".sprite-companion")).getPropertyValue("--bubble-shift-x"),
+      shiftY: getComputedStyle(bubble.closest(".sprite-companion")).getPropertyValue("--bubble-shift-y"),
+      transform: getComputedStyle(bubble).transform,
+      left: getComputedStyle(bubble).left,
+      right: getComputedStyle(bubble).right,
+      top: getComputedStyle(bubble).top,
+      bottom: getComputedStyle(bubble).bottom,
+    },
+    overlaps,
+  };
+})()
+'@
+    Assert-Condition ($BubbleGeometry.total -le 0.5) "Balão contextual sobrepôs conteúdo protegido: $($BubbleGeometry | ConvertTo-Json -Depth 6 -Compress)."
     Add-Check "toggle de reações e limite de um balão"
 
     Set-Checkbox "spriteSpeechInput" $false
@@ -657,6 +689,7 @@ try {
     $null = Invoke-CdpCommand "Runtime.enable"
     $null = Invoke-CdpCommand "Page.bringToFront"
     Wait-CdpCondition "document.readyState === 'complete' && document.querySelectorAll('.sprite-companion').length > 0" 15000
+    Wait-CdpCondition "document.getElementById('spriteWorld').dataset.configStatus === 'valid'" 5000
     $null = Invoke-CdpExpression @'
 (() => {
   window.__dashboardSmokeErrors = [];
@@ -674,6 +707,9 @@ try {
     Test-ReducedMotion
     Test-Drag
     Test-Toggles
+
+    $RuntimeErrors = @(Invoke-CdpExpression "window.__dashboardSmokeErrors || []")
+    Assert-Condition ($RuntimeErrors.Count -eq 0) "Erros JavaScript durante o smoke: $($RuntimeErrors -join '; ')."
 
     Write-Host "Smoke E2E do dashboard: $($Checks.Count) verificações passaram." -ForegroundColor Green
     $Checks | ForEach-Object { Write-Host "  [OK] $_" }

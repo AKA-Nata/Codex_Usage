@@ -1,0 +1,842 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.codex/schemas/sprite-behaviors.schema.json",
+  "title": "Configuração de comportamentos dos sprites",
+  "description": "Valida macros seguras, cards, comportamento padrão, falas e gatilhos declarativos do painel.",
+  "type": "object",
+  "required": [
+    "metadata",
+    "macros",
+    "cards",
+    "defaultBehavior",
+    "phrases",
+    "triggers"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "./sprite-behaviors.schema.json",
+      "description": "Caminho relativo do schema desta configuração."
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "macros": {
+      "$ref": "#/$defs/macros"
+    },
+    "cards": {
+      "$ref": "#/$defs/cards"
+    },
+    "defaultBehavior": {
+      "$ref": "#/$defs/defaultBehavior"
+    },
+    "phrases": {
+      "type": "array",
+      "description": "Biblioteca de falas reutilizáveis pelo comportamento casual.",
+      "items": {
+        "$ref": "#/$defs/phraseGroup"
+      },
+      "minItems": 1
+    },
+    "triggers": {
+      "type": "array",
+      "description": "Gatilhos avaliados por prioridade e protegidos por cooldown.",
+      "items": {
+        "$ref": "#/$defs/trigger"
+      },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "metadata": {
+      "type": "object",
+      "title": "Metadados",
+      "required": [
+        "id",
+        "version",
+        "schemaVersion",
+        "locale",
+        "description"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "version": {
+          "$ref": "#/$defs/semanticVersion"
+        },
+        "schemaVersion": {
+          "$ref": "#/$defs/semanticVersion"
+        },
+        "locale": {
+          "type": "string",
+          "pattern": "^[a-z]{2}(?:-[A-Z]{2})?$"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "semanticVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "macros": {
+      "type": "object",
+      "title": "Dicionário central de macros",
+      "description": "Cada chave representa uma macro disponível para interpolação segura nas falas.",
+      "required": [
+        "hora",
+        "data",
+        "tempo_sem_interacao",
+        "temperatura",
+        "clima",
+        "cpu",
+        "ram",
+        "disco",
+        "gpu",
+        "gpu_memoria",
+        "codex_5h_percentual",
+        "codex_5h_reset",
+        "codex_semanal_percentual",
+        "codex_semanal_reset",
+        "coleta_status",
+        "ultima_atualizacao"
+      ],
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/macro"
+      }
+    },
+    "macro": {
+      "type": "object",
+      "title": "Definição de macro",
+      "required": [
+        "token",
+        "origin",
+        "sourcePath",
+        "type",
+        "unit",
+        "fallback",
+        "description"
+      ],
+      "properties": {
+        "token": {
+          "type": "string",
+          "pattern": "^\\{\\{[a-z][a-z0-9_]*\\}\\}$",
+          "description": "Token literal usado nas falas, por exemplo {{cpu}}."
+        },
+        "origin": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Origem humana do dado."
+        },
+        "sourcePath": {
+          "type": "string",
+          "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*(?:\\.[A-Za-z_$][A-Za-z0-9_$]*)*$",
+          "description": "Caminho no contexto normalizado, sem execução de código."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "string",
+            "number",
+            "boolean",
+            "datetime",
+            "duration"
+          ]
+        },
+        "unit": {
+          "type": "string",
+          "description": "Unidade aplicada ao valor válido; use string vazia quando não houver."
+        },
+        "fallback": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ],
+          "description": "Valor seguro usado quando a origem estiver ausente ou inválida."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "cards": {
+      "type": "object",
+      "title": "Cards e seletores",
+      "required": [
+        "hora",
+        "interacao",
+        "temperatura",
+        "maquina",
+        "codex_5h",
+        "codex_semanal"
+      ],
+      "properties": {
+        "hora": {
+          "const": "#card-clock"
+        },
+        "interacao": {
+          "const": "#card-idle"
+        },
+        "temperatura": {
+          "const": "#card-weather"
+        },
+        "maquina": {
+          "const": "#card-machine"
+        },
+        "codex_5h": {
+          "const": "#card-five-hour"
+        },
+        "codex_semanal": {
+          "const": "#card-weekly"
+        },
+        "status": {
+          "type": "string",
+          "pattern": "^#[A-Za-z][A-Za-z0-9_-]*$",
+          "description": "Seletor opcional do indicador discreto de coleta."
+        }
+      },
+      "additionalProperties": false
+    },
+    "defaultBehavior": {
+      "type": "object",
+      "title": "Comportamento padrão",
+      "required": [
+        "enabled",
+        "initialState",
+        "speed",
+        "reactionDurationSeconds",
+        "walkDurationSeconds",
+        "restDurationSeconds",
+        "actionIntervalSeconds",
+        "allowedDestinations",
+        "casualSpeech",
+        "features",
+        "coordination",
+        "motion"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "initialState": {
+          "$ref": "#/$defs/spriteState"
+        },
+        "speed": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 400,
+          "description": "Velocidade de caminhada em pixels por segundo."
+        },
+        "reactionDurationSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 120
+        },
+        "walkDurationSeconds": {
+          "$ref": "#/$defs/nonNegativeRange"
+        },
+        "restDurationSeconds": {
+          "$ref": "#/$defs/nonNegativeRange"
+        },
+        "actionIntervalSeconds": {
+          "$ref": "#/$defs/nonNegativeRange"
+        },
+        "allowedDestinations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/cardKey"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "casualSpeech": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "intervalSeconds",
+            "phraseIds"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "intervalSeconds": {
+              "$ref": "#/$defs/nonNegativeRange"
+            },
+            "phraseIds": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/identifier"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "features": {
+          "type": "object",
+          "required": [
+            "reactions",
+            "movement",
+            "speech"
+          ],
+          "properties": {
+            "reactions": {
+              "type": "boolean"
+            },
+            "movement": {
+              "type": "boolean"
+            },
+            "speech": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "coordination": {
+          "type": "object",
+          "required": [
+            "maxConcurrentReactions",
+            "duplicatePhraseWindowSeconds",
+            "minimumSpriteGapPixels"
+          ],
+          "properties": {
+            "maxConcurrentReactions": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3
+            },
+            "duplicatePhraseWindowSeconds": {
+              "type": "number",
+              "minimum": 0
+            },
+            "minimumSpriteGapPixels": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "motion": {
+          "type": "object",
+          "required": [
+            "returnToFreeRoam",
+            "avoidCollisions",
+            "respectViewport",
+            "preserveDrag",
+            "safePlacement",
+            "reducedMotion"
+          ],
+          "properties": {
+            "returnToFreeRoam": {
+              "type": "boolean"
+            },
+            "avoidCollisions": {
+              "type": "boolean"
+            },
+            "respectViewport": {
+              "type": "boolean"
+            },
+            "preserveDrag": {
+              "type": "boolean"
+            },
+            "safePlacement": {
+              "type": "string",
+              "enum": [
+                "card-edge",
+                "safe-area"
+              ]
+            },
+            "reducedMotion": {
+              "type": "object",
+              "required": [
+                "honorPreference",
+                "disableWalking",
+                "reactionDurationSeconds"
+              ],
+              "properties": {
+                "honorPreference": {
+                  "type": "boolean"
+                },
+                "disableWalking": {
+                  "type": "boolean"
+                },
+                "reactionDurationSeconds": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 120
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "nonNegativeRange": {
+      "type": "object",
+      "required": [
+        "min",
+        "max"
+      ],
+      "properties": {
+        "min": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "phraseGroup": {
+      "type": "object",
+      "required": [
+        "id",
+        "texts"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "texts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/shortPhrase"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "weight": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "trigger": {
+      "type": "object",
+      "title": "Gatilho declarativo",
+      "required": [
+        "id",
+        "enabled",
+        "when",
+        "targetCard",
+        "spriteState",
+        "priority",
+        "cooldownSeconds"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "phrases"
+          ]
+        },
+        {
+          "required": [
+            "phraseRefs"
+          ]
+        }
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "when": {
+          "$ref": "#/$defs/condition"
+        },
+        "targetCard": {
+          "$ref": "#/$defs/cardKey"
+        },
+        "spriteState": {
+          "$ref": "#/$defs/spriteState"
+        },
+        "phrases": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/shortPhrase"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "phraseRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "cooldownSeconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "durationSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 120
+        },
+        "persistent": {
+          "type": "boolean",
+          "default": false
+        },
+        "holdSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 120,
+          "description": "Tempo máximo, em segundos, que o sprite permanece no card após a reação persistente."
+        }
+      },
+      "additionalProperties": false
+    },
+    "condition": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/scalarComparison"
+        },
+        {
+          "$ref": "#/$defs/betweenComparison"
+        },
+        {
+          "$ref": "#/$defs/allCondition"
+        },
+        {
+          "$ref": "#/$defs/anyCondition"
+        },
+        {
+          "$ref": "#/$defs/eventCondition"
+        },
+        {
+          "$ref": "#/$defs/timeRangeCondition"
+        }
+      ]
+    },
+    "scalarComparison": {
+      "type": "object",
+      "required": [
+        "metric",
+        "operator",
+        "value"
+      ],
+      "properties": {
+        "metric": {
+          "$ref": "#/$defs/metricName"
+        },
+        "operator": {
+          "type": "string",
+          "enum": [
+            ">",
+            ">=",
+            "<",
+            "<=",
+            "=="
+          ]
+        },
+        "value": {
+          "type": [
+            "number",
+            "string",
+            "boolean"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "betweenComparison": {
+      "type": "object",
+      "required": [
+        "metric",
+        "operator",
+        "value"
+      ],
+      "properties": {
+        "metric": {
+          "$ref": "#/$defs/metricName"
+        },
+        "operator": {
+          "const": "between"
+        },
+        "value": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        }
+      },
+      "additionalProperties": false
+    },
+    "allCondition": {
+      "type": "object",
+      "required": [
+        "all"
+      ],
+      "properties": {
+        "all": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/condition"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "anyCondition": {
+      "type": "object",
+      "required": [
+        "any"
+      ],
+      "properties": {
+        "any": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/condition"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "eventCondition": {
+      "type": "object",
+      "required": [
+        "event"
+      ],
+      "properties": {
+        "event": {
+          "$ref": "#/$defs/eventDescriptor"
+        }
+      },
+      "additionalProperties": false
+    },
+    "eventDescriptor": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "user_return",
+            "collection_error",
+            "collection_stale",
+            "collection_recovery",
+            "value_change",
+            "click",
+            "drag",
+            "random_interval"
+          ]
+        },
+        "metric": {
+          "$ref": "#/$defs/metricName"
+        },
+        "card": {
+          "$ref": "#/$defs/eventCardKey"
+        },
+        "phase": {
+          "type": "string",
+          "enum": [
+            "start",
+            "move",
+            "end"
+          ]
+        },
+        "minDelta": {
+          "type": "number",
+          "minimum": 0
+        },
+        "minIntervalSeconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "intervalSeconds": {
+          "$ref": "#/$defs/nonNegativeRange"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "value_change"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "metric"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "click"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "card"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "random_interval"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "intervalSeconds"
+            ]
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "timeRangeCondition": {
+      "type": "object",
+      "required": [
+        "timeRange"
+      ],
+      "properties": {
+        "timeRange": {
+          "type": "object",
+          "required": [
+            "start",
+            "end"
+          ],
+          "properties": {
+            "start": {
+              "$ref": "#/$defs/timeOfDay"
+            },
+            "end": {
+              "$ref": "#/$defs/timeOfDay"
+            },
+            "days": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "mon",
+                  "tue",
+                  "wed",
+                  "thu",
+                  "fri",
+                  "sat",
+                  "sun"
+                ]
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "timeOfDay": {
+      "type": "string",
+      "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"
+    },
+    "metricName": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_.]*$"
+    },
+    "cardKey": {
+      "type": "string",
+      "enum": [
+        "hora",
+        "interacao",
+        "temperatura",
+        "maquina",
+        "codex_5h",
+        "codex_semanal",
+        "status"
+      ]
+    },
+    "eventCardKey": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/cardKey"
+        },
+        {
+          "const": "sprite"
+        }
+      ]
+    },
+    "spriteState": {
+      "type": "string",
+      "enum": [
+        "idle",
+        "walk",
+        "inspect",
+        "point",
+        "talk",
+        "happy",
+        "worried",
+        "critical",
+        "hot",
+        "cold",
+        "sleep",
+        "wake",
+        "confused",
+        "celebrate"
+      ]
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "shortPhrase": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    }
+  }
+}

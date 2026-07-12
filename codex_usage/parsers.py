@@ -155,7 +155,9 @@ def parse_window(label: str, window: Any, timezone_name: str, source: str) -> di
         reset_at = seconds_from_now_to_iso(reset_after_seconds, timezone_name)
 
     duration = window_duration(window)
-    found = any(value is not None for value in [used, remaining, reset_at_epoch, reset_after_seconds, duration])
+    limit_reached = first_present(window, ["limit_reached", "limitReached"])
+    allowed = first_present(window, ["allowed", "is_allowed", "isAllowed"])
+    found = any(value is not None for value in [used, remaining, reset_at_epoch, reset_after_seconds, duration, limit_reached, allowed])
 
     return {
         "label": label,
@@ -166,6 +168,8 @@ def parse_window(label: str, window: Any, timezone_name: str, source: str) -> di
         "reset_at_epoch": reset_at_epoch,
         "reset_at": reset_at,
         "reset_after_seconds": reset_after_seconds,
+        "limit_reached": limit_reached,
+        "allowed": allowed,
         "source": source,
     }
 
@@ -180,6 +184,8 @@ def empty_window(label: str, source: str) -> dict[str, Any]:
         "reset_at_epoch": None,
         "reset_at": None,
         "reset_after_seconds": None,
+        "limit_reached": None,
+        "allowed": None,
         "source": source,
     }
 
@@ -281,6 +287,8 @@ def parse_dom_card(label: str, text: str, timezone_name: str, default_window_sec
         "reset_at": reset_at,
         "reset_after_seconds": seconds_until(reset_at, timezone_name),
         "reset_display_raw": reset_raw,
+        "limit_reached": None,
+        "allowed": None,
         "source": "dom",
     }
 

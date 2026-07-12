@@ -384,7 +384,7 @@ def get_weather(weather_config: dict[str, Any] | None) -> dict[str, Any]:
     url = _build_weather_url(config)
     request = urllib.request.Request(
         url,
-        headers={"User-Agent": "CodexUsageMonitor/4.1.1 local-dashboard"},
+        headers={"User-Agent": "CodexUsageMonitor/4.3.0 local-dashboard"},
         method="GET",
     )
 

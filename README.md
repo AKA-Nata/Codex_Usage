@@ -1,4 +1,4 @@
-# Codex Usage Monitor 4.2.0 — Python da máquina
+# Codex Usage Monitor 4.3.0 — Python da máquina
 
 Painel local para acompanhar os limites de uso de 5 horas e semanal do Codex,
 com companheiros pixel art que circulam pela interface e reagem aos dados reais
@@ -91,6 +91,19 @@ O salvamento ocorre somente pelo backend local. Antes de substituir
 `web/config/sprite-behaviors.json`, o servidor valida o documento contra o
 schema, confere macros e referências, verifica a revisão, cria backup e usa
 gravação atômica. Importação, exportação e restauração usam o mesmo gate.
+
+## Animações reais dos personagens
+
+Os quatro personagens nativos agora usam sprite sheets PNG próprios para cada
+estado em `web/assets/characters/<id>/`. O registry valida os manifests,
+pré-carrega e compartilha o cache das imagens e mantém os PNGs antigos como
+fallback. O motor de reações continua decidindo comportamento, card e fala; o
+novo motor de animação cuida exclusivamente de frames, FPS, loop, espelhamento,
+pause e reduced motion.
+
+O editor de gatilhos mostra uma prévia animada com play/pause, ajuste temporário
+de FPS e diagnóstico de asset/fallback. Configurações e preferências 4.2 usam os
+mesmos IDs (`explorer`, `wizard`, `mechanic`, `orb`) e migram sem regravação.
 
 As macros de GPU são preenchidas automaticamente em máquinas NVIDIA com
 `nvidia-smi` disponível. Em outros equipamentos, permanecem com o fallback

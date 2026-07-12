@@ -17,8 +17,9 @@
   <script type="module">
     import { spriteReactionEngineCases } from "./sprite-reaction-engine.cases.js";
     import { behaviorStudioModelCases } from "./behavior-studio-model.cases.js";
+    import { characterAnimationCases } from "./character-animation.cases.js";
 
-    const testCases = [...spriteReactionEngineCases, ...behaviorStudioModelCases];
+    const testCases = [...spriteReactionEngineCases, ...behaviorStudioModelCases, ...characterAnimationCases];
 
     const output = document.querySelector("#result");
     const lines = [];

@@ -1,6 +1,17 @@
 
 # Changelog
 
+## 4.3.0
+
+- Substituídas as simulações de estado em CSS por 60 sprite sheets PNG reais
+  dos quatro personagens nativos, com quatro frames por estado.
+- Adicionados `character-registry.js` e `sprite-animation-engine.js`, com
+  preload/cache, troca atômica sem piscar, FPS, loop, pause, espelhamento,
+  fallback para `idle`/PNG legado e reduced motion no primeiro frame.
+- O Studio passou a exibir prévia animada, controles e diagnóstico de assets.
+- Manifests versionados preservam os IDs 4.2 e permitem migração automática das
+  configurações e preferências existentes.
+
 ## 4.2.0
 
 - Adicionado Studio Visual de Comportamentos em seis abas para editar,

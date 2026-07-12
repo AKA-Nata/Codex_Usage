@@ -23,6 +23,7 @@ import {
   validateStudioSpeech,
 } from "./behavior-studio-model.js";
 import { normalizeSpriteData, resolveSpriteMacroValues, validateSpriteBehaviorConfig } from "./sprite-reaction-engine.js";
+import { BehaviorStudioAnimationPreview } from "./behavior-studio-animation-preview.js";
 
 
 const CHARACTER_LABELS = { auto: "Automático", explorer: "Explorador", wizard: "Mago", mechanic: "Mecânico", orb: "Orbital" };
@@ -132,7 +133,7 @@ function conditionRowHtml(row, index, config) {
 
 
 export class BehaviorStudio {
-  constructor({ root, backdrop, openButton, closeButton, importInput, confirmDialog, getEngine, getRealContext, onSavedConfig, onOpenAppearance } = {}) {
+  constructor({ root, backdrop, openButton, closeButton, importInput, confirmDialog, getEngine, getRealContext, onSavedConfig, onOpenAppearance, characterRegistry, animationEngine } = {}) {
     this.root = root;
     this.backdrop = backdrop;
     this.openButton = openButton;
@@ -143,6 +144,9 @@ export class BehaviorStudio {
     this.getRealContext = getRealContext;
     this.onSavedConfig = onSavedConfig;
     this.onOpenAppearance = onOpenAppearance;
+    this.characterRegistry = characterRegistry;
+    this.animationEngine = animationEngine;
+    this.animationPreview = new BehaviorStudioAnimationPreview({ registry: characterRegistry, animationEngine });
     this.config = null;
     this.revision = null;
     this.dirty = false;
@@ -291,6 +295,7 @@ export class BehaviorStudio {
       catch (error) { this.setStatus(error.message, "error"); return false; }
     }
     this.root.classList.remove("open");
+    this.animationPreview.destroy();
     this.backdrop?.classList.remove("open");
     this.root.setAttribute("aria-hidden", "true");
     this.backdrop?.setAttribute("aria-hidden", "true");
@@ -386,6 +391,7 @@ export class BehaviorStudio {
   }
 
   renderBehaviors() {
+    this.animationPreview.destroy();
     const panel = this.root.querySelector('[data-behavior-panel="behaviors"]');
     if (!panel) return;
     if (!this.selectedTriggerId || !this.config.triggers.some(trigger => trigger.id === this.selectedTriggerId)) this.selectedTriggerId = this.config.triggers?.[0]?.id || null;
@@ -418,6 +424,10 @@ export class BehaviorStudio {
         </aside>
         <section class="behavior-editor">${selected ? this.triggerEditorHtml(selected) : '<div class="behavior-empty">Crie o primeiro comportamento.</div>'}</section>
       </div>`;
+    if (selected) this.animationPreview.mount(panel.querySelector("[data-trigger-animation-preview]"), {
+      characterId: selected.character || "auto",
+      state: selected.spriteState || "idle",
+    });
   }
 
   triggerEditorHtml(trigger) {
@@ -456,6 +466,8 @@ export class BehaviorStudio {
             <label class="behavior-field span-3">Tempo máximo no card (s)<input name="holdSeconds" type="number" min="0" max="120" step="0.1" value="${escapeHtml(trigger.holdSeconds ?? 0)}" /></label>
           </div>
         </div>
+
+        <div class="behavior-section behavior-animation-preview" data-trigger-animation-preview></div>
 
         <div class="behavior-section">
           <h4>Falas do gatilho</h4>
@@ -923,6 +935,10 @@ export class BehaviorStudio {
   handleChange(event) {
     if (event.target.matches(".condition-kind")) event.target.closest("[data-condition-row]").dataset.kind = event.target.value;
     if (event.target.matches('[data-condition="eventType"]')) event.target.closest("[data-condition-row]").dataset.eventType = event.target.value;
+    if (event.target.matches('[data-studio-form="trigger"] [name="character"], [data-studio-form="trigger"] [name="spriteState"]')) {
+      const form = event.target.closest('[data-studio-form="trigger"]');
+      this.animationPreview.update({ characterId: form.elements.character.value, state: form.elements.spriteState.value });
+    }
     if (event.target.matches('[data-control="rule-filter"], [data-control="rule-sort"]')) {
       try {
         this.commitActiveForm();

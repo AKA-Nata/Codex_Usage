@@ -1,0 +1,128 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "explorer",
+  "name": "Explorador",
+  "version": "4.3.0",
+  "frame": {
+    "width": 256,
+    "height": 256,
+    "layout": "horizontal"
+  },
+  "fps": 6,
+  "loop": true,
+  "baseline": 0.9,
+  "anchor": {
+    "x": 0.5,
+    "y": 0.88
+  },
+  "orientation": "right",
+  "fallback": "idle",
+  "visualIdentity": {
+    "id": "explorer",
+    "name": "Explorador"
+  },
+  "personality": {
+    "id": "technical"
+  },
+  "tags": [
+    "native",
+    "pixel-art"
+  ],
+  "capabilities": [
+    "speech",
+    "movement",
+    "diagnostics"
+  ],
+  "states": {
+    "idle": {
+      "asset": "idle.png",
+      "frames": 4,
+      "fps": 4,
+      "loop": true
+    },
+    "walk": {
+      "asset": "walk.png",
+      "frames": 4,
+      "fps": 8,
+      "loop": true
+    },
+    "talk": {
+      "asset": "talk.png",
+      "frames": 4,
+      "fps": 6,
+      "loop": true
+    },
+    "point": {
+      "asset": "point.png",
+      "frames": 4,
+      "fps": 6,
+      "loop": true
+    },
+    "inspect": {
+      "asset": "inspect.png",
+      "frames": 4,
+      "fps": 5,
+      "loop": true
+    },
+    "happy": {
+      "asset": "happy.png",
+      "frames": 4,
+      "fps": 7,
+      "loop": true
+    },
+    "worried": {
+      "asset": "worried.png",
+      "frames": 4,
+      "fps": 6,
+      "loop": true
+    },
+    "critical": {
+      "asset": "critical.png",
+      "frames": 4,
+      "fps": 10,
+      "loop": true
+    },
+    "hot": {
+      "asset": "hot.png",
+      "frames": 4,
+      "fps": 7,
+      "loop": true
+    },
+    "cold": {
+      "asset": "cold.png",
+      "frames": 4,
+      "fps": 6,
+      "loop": true
+    },
+    "sleep": {
+      "asset": "sleep.png",
+      "frames": 4,
+      "fps": 2,
+      "loop": true
+    },
+    "wake": {
+      "asset": "wake.png",
+      "frames": 4,
+      "fps": 8,
+      "loop": false
+    },
+    "confused": {
+      "asset": "confused.png",
+      "frames": 4,
+      "fps": 5,
+      "loop": true
+    },
+    "celebrate": {
+      "asset": "celebrate.png",
+      "frames": 4,
+      "fps": 8,
+      "loop": false
+    },
+    "dragging": {
+      "asset": "dragging.png",
+      "frames": 4,
+      "fps": 4,
+      "loop": true
+    }
+  }
+}

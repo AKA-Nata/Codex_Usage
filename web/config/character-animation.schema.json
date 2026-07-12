@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.codex/schemas/character-animation.schema.json",
+  "title": "Manifesto de animação de personagem nativo",
+  "type": "object",
+  "required": ["schemaVersion", "id", "name", "version", "frame", "fps", "loop", "baseline", "anchor", "orientation", "fallback", "states"],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "1.0.0" },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{1,63}$" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:[-+][0-9A-Za-z.-]+)?$" },
+    "frame": {
+      "type": "object",
+      "required": ["width", "height", "layout"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 16, "maximum": 1024 },
+        "height": { "type": "integer", "minimum": 16, "maximum": 1024 },
+        "layout": { "const": "horizontal" }
+      },
+      "additionalProperties": false
+    },
+    "fps": { "type": "number", "minimum": 1, "maximum": 60 },
+    "loop": { "type": "boolean" },
+    "baseline": { "type": "number", "minimum": 0, "maximum": 1 },
+    "anchor": {
+      "type": "object",
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number", "minimum": 0, "maximum": 1 },
+        "y": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "orientation": { "enum": ["left", "right"] },
+    "fallback": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{1,63}$" },
+    "states": {
+      "type": "object",
+      "minProperties": 14,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["asset", "frames", "fps", "loop"],
+        "properties": {
+          "asset": { "type": "string", "pattern": "^[^/\\\\:]+\\.png$" },
+          "frames": { "type": "integer", "minimum": 1, "maximum": 128 },
+          "fps": { "type": "number", "minimum": 1, "maximum": 60 },
+          "loop": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "visualIdentity": { "type": "object" },
+    "personality": { "type": "object" },
+    "tags": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "capabilities": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+  },
+  "additionalProperties": false
+}

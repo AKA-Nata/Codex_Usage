@@ -306,6 +306,11 @@ function Get-GeometryResult {
     return bubble && visible(bubble) && Number(getComputedStyle(bubble).opacity) > 0.05;
   }).length;
   if (visibleBubbles > 1) errors.push(`${visibleBubbles} balões visíveis simultaneamente`);
+  const animationProblems = spriteElements.filter(element => {
+    const status = element.querySelector(".sprite-body")?.dataset.animationStatus;
+    return status !== "ready" && status !== "fallback";
+  }).length;
+  if (animationProblems) errors.push(`${animationProblems} animações sem preload`);
   if (Math.abs(scrollX) > 0.5) errors.push(`scrollX=${scrollX}`);
 
   return {
@@ -480,6 +485,7 @@ function Test-ReducedMotion {
         features = @(@{ name = "prefers-reduced-motion"; value = "reduce" })
     }
     Wait-CdpCondition "document.getElementById('spriteWorld').dataset.reducedMotion === 'true'"
+    Wait-CdpCondition "[...document.querySelectorAll('.sprite-body')].every(item => item.dataset.animationReducedMotion === 'true' && item.dataset.animationFrame === '0')"
     Wait-UiSettled
 
     $Reduced = Invoke-CdpExpression @'
@@ -651,6 +657,48 @@ function Test-BehaviorStudio {
     Assert-Condition ($Crud.conditions -eq 2) "Editor visual não adicionou condição AND/OR."
     Assert-Condition ([bool] $Crud.hasCharacter -and [bool] $Crud.hasRepeat) "Campos de personagem/repetição ausentes."
     Add-Check "CRUD visual e editor de condições"
+
+    Wait-CdpCondition "document.querySelector('[data-trigger-animation-preview] .animation-preview-sprite')?.dataset.animationStatus === 'ready'"
+    $AnimationPreview = Invoke-CdpExpression @'
+(async () => {
+  const sprite = document.querySelector("[data-trigger-animation-preview] .animation-preview-sprite");
+  const before = sprite.dataset.animationFrame;
+  await new Promise(resolve => setTimeout(resolve, 650));
+  const animated = sprite.dataset.animationFrame !== before;
+  document.querySelector('[data-animation-action="pause"]').click();
+  const pausedAt = sprite.dataset.animationFrame;
+  await new Promise(resolve => setTimeout(resolve, 500));
+  const paused = sprite.dataset.animationFrame === pausedAt;
+  document.querySelector('[data-animation-action="play"]').click();
+  await new Promise(resolve => setTimeout(resolve, 650));
+  return {
+    animated,
+    paused,
+    resumed: sprite.dataset.animationFrame !== pausedAt,
+    status: sprite.dataset.animationStatus,
+    fps: Number(sprite.dataset.animationFps),
+    frames: Number(sprite.dataset.animationFrames),
+    fallback: sprite.dataset.animationFallback,
+    fallbackReason: sprite.dataset.animationFallbackReason,
+    source: sprite.dataset.animationSource,
+    asset: sprite.style.backgroundImage,
+    diagnostic: sprite.closest('[data-trigger-animation-preview]')?.querySelector('[data-animation-diagnostic]')?.textContent || "",
+  };
+})()
+'@
+    Assert-Condition ([bool] $AnimationPreview.animated -and [bool] $AnimationPreview.paused -and [bool] $AnimationPreview.resumed) "Preview não animou/pausou/retomou: $($AnimationPreview | ConvertTo-Json -Compress)"
+    Assert-Condition ($AnimationPreview.frames -ge 4 -and $AnimationPreview.fps -ge 1 -and [bool] $AnimationPreview.diagnostic) "Preview não exibiu frames, FPS ou diagnóstico."
+    Add-Check "preview animado com play, pause, FPS e diagnóstico"
+
+    $Fallback = Invoke-CdpExpression @'
+(async () => {
+  const module = await import("./character-registry.js");
+  const resolution = await module.defaultCharacterRegistry.resolveState("explorer", "estado_inexistente");
+  return { fallback: resolution.fallback, requested: resolution.requestedState, resolved: resolution.resolvedState, source: resolution.source };
+})()
+'@
+    Assert-Condition ([bool] $Fallback.fallback -and $Fallback.resolved -eq "idle") "Fallback visual não resolveu estado ausente para idle: $($Fallback | ConvertTo-Json -Compress)"
+    Add-Check "diagnóstico de fallback visual no Edge"
 
     $null = Invoke-CdpExpression "document.querySelector('[data-behavior-tab=speech]').click(); true"
     Wait-CdpCondition "!document.getElementById('behaviorPanelSpeech').hidden && document.querySelector('[data-studio-form=phrase]')"

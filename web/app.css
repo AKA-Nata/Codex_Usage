@@ -164,7 +164,7 @@ h1 { margin: 0; font-size: clamp(18px, 4vw, 24px); letter-spacing: -.04em; white
   inset: 0;
   background: var(--sprite-url) center / contain no-repeat;
   image-rendering: pixelated;
-  transform: scaleX(var(--sprite-facing));
+  transform: scaleX(var(--animation-facing, var(--sprite-facing)));
   transform-origin: 50% 82%;
   transition: filter .2s steps(2, end);
 }
@@ -191,44 +191,38 @@ h1 { margin: 0; font-size: clamp(18px, 4vw, 24px); letter-spacing: -.04em; white
 .sprite-effect::before, .sprite-effect::after { content: ""; position: absolute; }
 .sprite-companion.facing-left .sprite-effect { left: 2%; right: auto; }
 
-.sprite-companion.state-idle .sprite-body { animation: spriteIdle 3.2s steps(2, end) infinite; }
-.sprite-companion.state-walk .sprite-body { animation: spriteWalk .48s steps(2, end) infinite; }
 .sprite-companion.state-walk .sprite-shadow { animation: shadowWalk .48s steps(2, end) infinite; }
-.sprite-companion.state-inspect .sprite-body { animation: spriteInspect 1s steps(3, end) infinite; }
 .sprite-companion.state-inspect .sprite-effect { top: 28%; width: 19px; height: 19px; border: 3px solid var(--accent); opacity: .9; animation: effectInspect 1s steps(2, end) infinite; }
 .sprite-companion.state-inspect .sprite-effect::before { inset: 5px; border: 2px solid var(--accent-2); }
-.sprite-companion.state-point .sprite-body { animation: spritePoint .72s steps(3, end) infinite; }
 .sprite-companion.state-point .sprite-effect { top: 46%; right: -5px; width: 26px; height: 4px; background: var(--accent); opacity: 1; animation: effectPoint .72s steps(3, end) infinite; }
 .sprite-companion.facing-left.state-point .sprite-effect { left: -5px; right: auto; }
 .sprite-companion.state-point .sprite-effect::after { right: -1px; top: -5px; width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-left: 9px solid var(--accent); }
-.sprite-companion.state-talk .sprite-body { animation: spriteTalk .42s steps(2, end) infinite; }
 .sprite-companion.state-talk .sprite-effect { top: 43%; width: 5px; height: 5px; background: var(--accent); box-shadow: 8px -5px 0 var(--accent-2); opacity: .9; animation: effectTalk .42s steps(2, end) infinite; }
-.sprite-companion.state-happy .sprite-body { animation: spriteHappy .82s steps(4, end) 2; filter: drop-shadow(0 0 9px color-mix(in srgb, var(--ok) 72%, transparent)); }
+.sprite-companion.state-happy .sprite-body { filter: drop-shadow(0 0 9px color-mix(in srgb, var(--ok) 72%, transparent)); }
 .sprite-companion.state-happy .sprite-effect { width: 5px; height: 5px; background: var(--ok); box-shadow: -9px 9px 0 var(--accent), 10px 7px 0 var(--accent-2); opacity: 1; animation: effectSpark .82s steps(4, end) 2; }
-.sprite-companion.state-worried .sprite-body { animation: spriteWorried .7s steps(4, end) infinite; filter: saturate(.78) drop-shadow(0 0 7px color-mix(in srgb, var(--warn) 70%, transparent)); }
+.sprite-companion.state-worried .sprite-body { filter: saturate(.78) drop-shadow(0 0 7px color-mix(in srgb, var(--warn) 70%, transparent)); }
 .sprite-companion.state-worried .sprite-effect { opacity: 1; animation: effectPulse .7s steps(2, end) infinite; }
 .sprite-companion.state-worried .sprite-effect::before { content: "!"; inset: 0; color: var(--warn); }
-.sprite-companion.state-critical .sprite-body { animation: spriteCritical .4s steps(4, end) infinite; filter: saturate(1.2) drop-shadow(0 0 12px var(--danger)); }
+.sprite-companion.state-critical .sprite-body { filter: saturate(1.2) drop-shadow(0 0 12px var(--danger)); }
 .sprite-companion.state-critical .sprite-effect { width: 31px; opacity: 1; animation: effectPulse .4s steps(2, end) infinite; }
 .sprite-companion.state-critical .sprite-effect::before { content: "!!"; inset: 0; color: var(--danger); }
-.sprite-companion.state-hot .sprite-body { animation: spriteHot .9s steps(3, end) infinite; filter: sepia(.34) saturate(1.35) drop-shadow(0 0 9px var(--danger)); }
+.sprite-companion.state-hot .sprite-body { filter: sepia(.34) saturate(1.35) drop-shadow(0 0 9px var(--danger)); }
 .sprite-companion.state-hot .sprite-effect { top: 12%; width: 5px; height: 5px; background: var(--danger); box-shadow: -10px 12px 0 var(--warn), 8px 17px 0 var(--danger); opacity: .9; animation: effectHeat .9s steps(3, end) infinite; }
-.sprite-companion.state-cold .sprite-body { animation: spriteCold .66s steps(4, end) infinite; filter: saturate(.72) brightness(.9) drop-shadow(0 0 10px #8bdcff); }
+.sprite-companion.state-cold .sprite-body { filter: saturate(.72) brightness(.9) drop-shadow(0 0 10px #8bdcff); }
 .sprite-companion.state-cold .sprite-effect { top: 14%; width: 5px; height: 5px; background: #d7f4ff; box-shadow: -9px 12px 0 #8bdcff, 9px 18px 0 #d7f4ff; opacity: .95; animation: effectSnow 1.15s steps(4, end) infinite; }
-.sprite-companion.state-sleep .sprite-body { animation: spriteSleep 2.4s steps(2, end) infinite; filter: saturate(.7) brightness(.8); }
+.sprite-companion.state-sleep .sprite-body { filter: saturate(.7) brightness(.8); }
 .sprite-companion.state-sleep .sprite-effect { top: 12%; width: 34px; opacity: .9; animation: effectSleep 2.4s steps(3, end) infinite; }
 .sprite-companion.state-sleep .sprite-effect::before { content: "Zz"; inset: 0; color: var(--muted); }
-.sprite-companion.state-wake .sprite-body { animation: spriteWake .78s steps(4, end) 1 both; }
 .sprite-companion.state-wake .sprite-effect { opacity: 1; animation: effectWake .78s steps(4, end) 1 both; }
 .sprite-companion.state-wake .sprite-effect::before { content: "!"; inset: 0; color: var(--accent); }
-.sprite-companion.state-confused .sprite-body { animation: spriteConfused 1.05s steps(4, end) infinite; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent-2) 72%, transparent)); }
+.sprite-companion.state-confused .sprite-body { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent-2) 72%, transparent)); }
 .sprite-companion.state-confused .sprite-effect { opacity: 1; animation: effectConfused 1.05s steps(4, end) infinite; }
 .sprite-companion.state-confused .sprite-effect::before { content: "?"; inset: 0; color: var(--accent-2); }
-.sprite-companion.state-celebrate .sprite-body { animation: spriteCelebrate .9s steps(5, end) 3; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--ok) 70%, transparent)); }
+.sprite-companion.state-celebrate .sprite-body { filter: drop-shadow(0 0 10px color-mix(in srgb, var(--ok) 70%, transparent)); }
 .sprite-companion.state-celebrate .sprite-effect { top: 8%; width: 5px; height: 5px; background: var(--accent); box-shadow: -14px 10px 0 var(--ok), 13px 12px 0 var(--accent-2), -5px 24px 0 var(--warn), 14px 28px 0 var(--danger); opacity: 1; animation: effectCelebrate .9s steps(5, end) 3; }
 
 .sprite-companion.dragging { z-index: 2; pointer-events: auto; }
-.sprite-companion.dragging .sprite-body { animation: none; transform: translateY(-8px) scaleX(var(--sprite-facing)) scale(1.04); filter: drop-shadow(0 16px 10px rgba(0,0,0,.45)); }
+.sprite-companion.dragging .sprite-body { filter: drop-shadow(0 16px 10px rgba(0,0,0,.45)); }
 .sprite-companion.dragging .sprite-effect { animation: none; opacity: 0; }
 
 @keyframes spriteIdle { 0%,88%,100% { transform: translateY(0) scaleX(var(--sprite-facing)); } 92% { transform: translateY(-2px) scaleX(var(--sprite-facing)); } }

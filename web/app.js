@@ -1,5 +1,7 @@
 import { SpriteReactionEngine, loadSpriteBehaviorConfig } from "./sprite-reaction-engine.js";
 import { createBehaviorStudio } from "./behavior-studio.js";
+import { CharacterRegistry, NATIVE_CHARACTER_IDS } from "./character-registry.js";
+import { SpriteAnimationEngine } from "./sprite-animation-engine.js";
 
 const STORAGE_KEY = "codex-pulse-design-v2";
 const DESIGN_SCHEMA_VERSION = 3;
@@ -282,6 +284,22 @@ function ingestSpriteContext() {
   state.spriteEngine?.ingest(currentSpriteContext());
 }
 
+function renderCharacterOptions() {
+  const grid = byId("spriteCharacterOptions");
+  if (!grid || !state.characterRegistry) return;
+  const fragment = document.createDocumentFragment();
+  state.characterRegistry.list().forEach(character => {
+    const button = document.createElement("button");
+    button.className = "sprite-option";
+    button.type = "button";
+    button.dataset.sprite = character.id;
+    button.textContent = character.name;
+    button.title = `${character.source} · ${character.version || "fallback"}`;
+    fragment.appendChild(button);
+  });
+  grid.replaceChildren(fragment);
+}
+
 async function recordSpriteReaction(entry) {
   try {
     await fetch("/api/studio/history", {
@@ -420,6 +438,11 @@ function bindEvents() {
 }
 
 async function bootstrap() {
+  state.characterRegistry = new CharacterRegistry();
+  await state.characterRegistry.loadNative();
+  await Promise.all(NATIVE_CHARACTER_IDS.map(id => state.characterRegistry.preload(id, ["idle"])));
+  state.animationEngine = new SpriteAnimationEngine({ registry: state.characterRegistry });
+  renderCharacterOptions();
   const behaviorReport = await loadSpriteBehaviorConfig("./config/sprite-behaviors.json");
   state.behaviorConfig = behaviorReport.config;
   state.spriteEngine = new SpriteReactionEngine({
@@ -429,6 +452,8 @@ async function bootstrap() {
     onReaction: recordSpriteReaction,
     behaviorConfig: behaviorReport.config,
     configReport: behaviorReport,
+    characterRegistry: state.characterRegistry,
+    animationEngine: state.animationEngine,
   });
   bindEvents();
   applyDesign();
@@ -441,6 +466,8 @@ async function bootstrap() {
     confirmDialog: byId("behaviorConfirmDialog"),
     getEngine: () => state.spriteEngine,
     getRealContext: currentSpriteContext,
+    characterRegistry: state.characterRegistry,
+    animationEngine: state.animationEngine,
     onOpenAppearance: () => setStudio(true),
     onSavedConfig: async (config, report) => {
       state.behaviorConfig = config;

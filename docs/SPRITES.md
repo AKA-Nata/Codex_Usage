@@ -18,45 +18,41 @@ nem frases de reação.
 | Mecânico | `web/assets/sprites/mechanic.png` | 439 × 439 px |
 | Orbital | `web/assets/sprites/orb.png` | 430 × 430 px |
 
-Os quatro arquivos têm fundo transparente e são renderizados com
-`image-rendering: pixelated`. Nesta versão, cada personagem possui um único
-frame-base. As diferenças de estado são produzidas por transformações em
-passos, filtros e pelo elemento `.sprite-effect`; não há interpolação entre
-bitmaps. `web/assets/sprite-sheet.png` é uma composição legada dos quatro
-personagens e não é usada pelo motor.
+Os quatro arquivos antigos continuam transparentes e funcionam como fallback.
+As animações 4.3 ficam em `web/assets/characters/<personagem>/`: cada estado é
+uma sheet horizontal de 1024 × 256 px com quatro frames de 256 × 256 px. O
+`character.json` informa identidade, versão, FPS, loop, baseline, âncora,
+orientação, estados e fallback. `web/assets/sprite-sheet.png` permanece apenas
+como composição legada.
 
-Nenhum asset bitmap foi criado na versão 4.1.0. Todos os novos estados e sinais
-visuais reaproveitam os quatro frames-base existentes por meio de CSS, mantendo
-pixels nítidos, paleta, proporção, transparência e identidade dos personagens.
-
-Se forem adicionados frames no futuro, eles devem permanecer em
-`web/assets/sprites/<personagem>/<estado>.png`, com canvas, baseline, escala e
-origem idênticos dentro de cada personagem. O frame-base atual continua sendo
-o fallback obrigatório.
+`character-registry.js` valida manifests e dimensões, compartilha preload/cache
+e resolve `estado solicitado → idle → PNG legado`. O
+`sprite-animation-engine.js` troca a sheet somente após preload, avança frames
+por FPS, respeita loop e pause, espelha pela orientação nativa e fixa o primeiro
+frame em reduced motion. O motor de reações apenas escolhe o estado.
 
 ## Estados e mapeamento visual
 
-As taxas abaixo representam passos visuais de CSS por segundo, não novos
-frames de bitmap. Cada estado continua usando exatamente um frame-base por
-personagem.
+As taxas abaixo são lidas do manifesto e controlam frames bitmap reais. Efeitos
+decorativos CSS permanecem auxiliares, sem decidir a pose principal.
 
 | Estado/classe | Frames | Keyframe e FPS visual aproximado | Loop | Saída/fallback |
 | --- | ---: | --- | --- | --- |
-| `idle` / `.state-idle` | 1 | `spriteIdle`, 0,6 FPS | contínuo e discreto | frame-base parado |
-| `walk` / `.state-walk` | 1 | `spriteWalk`, 4,2 FPS | enquanto houver destino | `idle` no destino |
-| `inspect` / `.state-inspect` | 1 | `spriteInspect`, 3 FPS | enquanto inspeciona | `point` ou apresentação da reação |
-| `point` / `.state-point` | 1 | `spritePoint`, 4,2 FPS | enquanto aponta | estado próprio da reação |
-| `talk` / `.state-talk` | 1 | `spriteTalk`, 4,8 FPS | durante a fala | `idle` |
-| `happy` / `.state-happy` | 1 | `spriteHappy`, 4,9 FPS | 2 ciclos | `idle` |
-| `worried` / `.state-worried` | 1 | `spriteWorried`, 5,7 FPS | durante o alerta | `inspect` |
-| `critical` / `.state-critical` | 1 | `spriteCritical`, 10 FPS | durante a condição crítica | permanece fixado enquanto a condição existir; depois `idle` |
-| `hot` / `.state-hot` | 1 | `spriteHot`, 3,3 FPS | durante calor/carga alta | `idle` |
-| `cold` / `.state-cold` | 1 | `spriteCold`, 6,1 FPS | durante o frio | `idle` |
-| `sleep` / `.state-sleep` | 1 | `spriteSleep`, 0,8 FPS | enquanto o usuário estiver inativo | `wake` no retorno ou `idle` ao liberar a condição |
-| `wake` / `.state-wake` | 1 | `spriteWake`, 5,1 FPS | 1 ciclo | `idle` |
-| `confused` / `.state-confused` | 1 | `spriteConfused`, 3,8 FPS | durante erro ou dúvida | permanece fixado em erros persistentes; caso contrário, `idle` |
-| `celebrate` / `.state-celebrate` | 1 | `spriteCelebrate`, 5,6 FPS | 3 ciclos | `idle` |
-| `dragging` / `.dragging` | 1 | sem keyframe, 0 FPS | somente durante o arraste | estado persistente fixado ou `idle` |
+| `idle` / `.state-idle` | 4 | 4 FPS | contínuo e discreto | primeiro frame/PNG legado |
+| `walk` / `.state-walk` | 4 | 8 FPS | enquanto houver destino | `idle` no destino |
+| `inspect` / `.state-inspect` | 4 | 5 FPS | enquanto inspeciona | `point` ou apresentação da reação |
+| `point` / `.state-point` | 4 | 6 FPS | enquanto aponta | estado próprio da reação |
+| `talk` / `.state-talk` | 4 | 6 FPS | durante a fala | `idle` |
+| `happy` / `.state-happy` | 4 | 7 FPS | durante a reação | `idle` |
+| `worried` / `.state-worried` | 4 | 6 FPS | durante o alerta | `inspect` |
+| `critical` / `.state-critical` | 4 | 10 FPS | durante a condição crítica | permanece fixado enquanto a condição existir; depois `idle` |
+| `hot` / `.state-hot` | 4 | 7 FPS | durante calor/carga alta | `idle` |
+| `cold` / `.state-cold` | 4 | 6 FPS | durante o frio | `idle` |
+| `sleep` / `.state-sleep` | 4 | 2 FPS | enquanto o usuário estiver inativo | `wake` no retorno ou `idle` ao liberar a condição |
+| `wake` / `.state-wake` | 4 | 8 FPS | 1 ciclo | `idle` |
+| `confused` / `.state-confused` | 4 | 5 FPS | durante erro ou dúvida | permanece fixado em erros persistentes; caso contrário, `idle` |
+| `celebrate` / `.state-celebrate` | 4 | 8 FPS | 1 ciclo | `idle` |
+| `dragging` / `.dragging` | 4 | 4 FPS | somente durante o arraste | estado persistente fixado ou `idle` |
 
 `facing-left` espelha o frame e o efeito. `talking` controla a visibilidade do
 balão. `bubble-left`, `bubble-right` e `bubble-below` escolhem a orientação do
@@ -95,6 +91,12 @@ frase e se a reação deve permanecer enquanto a condição existir. O contrato
 2.0 também permite nome amigável, personagem automático ou específico, falas
 por personagem, fallback, prevenção de repetição e repetição configurável
 enquanto a condição permanece ativa.
+
+`durationSeconds` controla a apresentação da reação. Quando `persistent` é
+verdadeiro, `holdSeconds` define o tempo máximo que o personagem pode continuar
+ancorado ao card após essa apresentação enquanto a condição ainda estiver
+ativa. Valor zero libera o personagem imediatamente; a remoção da condição
+sempre encerra a permanência antes do limite.
 
 O Studio Visual edita esse contrato sem expor o JSON ao usuário. A configuração
 só é aplicada ao motor após validação pelo backend, backup e escrita atômica;

@@ -51,6 +51,12 @@ validação de fala e simulação como funções puras testáveis. O simulador a
 uma cópia do contexto e só chama `playTemporary` quando o usuário escolhe
 reproduzir a reação no painel.
 
+`web/character-registry.js` centraliza catálogo, manifests, preload, cache e
+fallback dos personagens. `web/sprite-animation-engine.js` mantém um único loop
+de frames para painel e previews. O reaction engine continua responsável por
+condições, fila, movimento e despacho, delegando somente a renderização do
+estado. `web/behavior-studio-animation-preview.js` isola a prévia do Studio.
+
 As regras editáveis estão em `web/config/sprite-behaviors.json`. O arquivo
 `web/config/sprite-behaviors.schema.json` descreve seu contrato e permite
 diagnósticos amigáveis antes da compilação. A configuração contém:

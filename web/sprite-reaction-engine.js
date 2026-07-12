@@ -1,29 +1,16 @@
-const SPRITES = {
-  explorer: { name: "Explorador", url: "./assets/sprites/explorer.png" },
-  wizard: { name: "Mago", url: "./assets/sprites/wizard.png" },
-  mechanic: { name: "Mecânico", url: "./assets/sprites/mechanic.png" },
-  orb: { name: "Orbital", url: "./assets/sprites/orb.png" },
-};
+import {
+  CHARACTER_SELECTIONS,
+  CHARACTER_STATES,
+  NATIVE_CHARACTER_DEFINITIONS,
+  NATIVE_CHARACTER_IDS,
+  defaultCharacterRegistry,
+} from "./character-registry.js";
+import { defaultSpriteAnimationEngine } from "./sprite-animation-engine.js";
 
-const SPRITE_ORDER = ["explorer", "wizard", "mechanic", "orb"];
-export const SPRITE_CHARACTER_SELECTIONS = Object.freeze(["auto", ...SPRITE_ORDER]);
-
-export const SPRITE_STATES = Object.freeze([
-  "idle",
-  "walk",
-  "inspect",
-  "point",
-  "talk",
-  "happy",
-  "worried",
-  "critical",
-  "hot",
-  "cold",
-  "sleep",
-  "wake",
-  "confused",
-  "celebrate",
-]);
+const SPRITES = Object.fromEntries(NATIVE_CHARACTER_DEFINITIONS.map(item => [item.id, { name: item.name, url: item.legacyUrl }]));
+const SPRITE_ORDER = [...NATIVE_CHARACTER_IDS];
+export const SPRITE_CHARACTER_SELECTIONS = CHARACTER_SELECTIONS;
+export const SPRITE_STATES = Object.freeze(CHARACTER_STATES.filter(state => state !== "dragging"));
 
 export const DEFAULT_THRESHOLDS = Object.freeze({
   codexNormalAbove: 60,
@@ -1549,12 +1536,14 @@ function rectAt(x, y, size, inset = 0.12) {
 }
 
 export class SpriteReactionEngine {
-  constructor({ root, getContext, onHumanInteraction, onReaction, thresholds, cooldowns, now, random, behaviorConfig = null, configReport = null } = {}) {
+  constructor({ root, getContext, onHumanInteraction, onReaction, thresholds, cooldowns, now, random, behaviorConfig = null, configReport = null, characterRegistry = defaultCharacterRegistry, animationEngine = defaultSpriteAnimationEngine } = {}) {
     if (!root) throw new Error("SpriteReactionEngine requer um elemento root.");
     this.root = root;
     this.getContext = getContext;
     this.onHumanInteraction = onHumanInteraction;
     this.onReaction = typeof onReaction === "function" ? onReaction : null;
+    this.characterRegistry = characterRegistry;
+    this.animationEngine = animationEngine;
     this.thresholds = mergeThresholds(thresholds);
     this.cooldowns = { ...DEFAULT_COOLDOWNS, ...(cooldowns || {}) };
     this.now = typeof now === "function" ? now : () => Date.now();
@@ -1765,12 +1754,13 @@ export class SpriteReactionEngine {
     if (this.frameRequest !== null) cancelAnimationFrame(this.frameRequest);
     this.cardEventBindings.forEach(({ element, handler }) => element.removeEventListener("click", handler));
     this.cardEventBindings = [];
-    this.companions.forEach(companion => companion.element.remove());
+    this.companions.forEach(companion => { companion.animation?.destroy(); companion.element.remove(); });
     this.companions = [];
   }
 
   setReducedMotion(reduced) {
     this.reducedMotion = Boolean(reduced);
+    this.animationEngine?.setReducedMotion(this.reducedMotion);
     this.root.dataset.reducedMotion = String(this.reducedMotion);
     this.companions.forEach(companion => {
       companion.targetX = companion.x;
@@ -1879,7 +1869,7 @@ export class SpriteReactionEngine {
   }
 
   rebuild() {
-    this.companions.forEach(companion => companion.element.remove());
+    this.companions.forEach(companion => { companion.animation?.destroy(); companion.element.remove(); });
     this.companions = [];
     this.queue.activeSignatures.clear();
     this.root.classList.toggle("hidden", !this.settings.enabled);
@@ -1906,7 +1896,8 @@ export class SpriteReactionEngine {
   }
 
   createCompanion(index, spriteType) {
-    const sprite = SPRITES[spriteType];
+    const registryCharacter = this.characterRegistry?.get(spriteType);
+    const sprite = { name: registryCharacter?.manifest?.name || registryCharacter?.name || SPRITES[spriteType]?.name || spriteType, url: registryCharacter?.legacyUrl || SPRITES[spriteType]?.url || SPRITES.explorer.url };
     const initialState = SPRITE_STATES.includes(this.behaviorConfig?.defaultBehavior?.initialState)
       ? this.behaviorConfig.defaultBehavior.initialState
       : "idle";
@@ -1955,13 +1946,22 @@ export class SpriteReactionEngine {
       lastDragNotifyAt: 0,
     };
     companion.nameElement.textContent = companion.name;
+    companion.body.style.backgroundImage = `url("${sprite.url}")`;
+    companion.animation = this.animationEngine?.attach(companion.body, {
+      characterId: spriteType,
+      state: initialState,
+      facing: "right",
+      onDiagnostic: diagnostic => {
+        companion.element.dataset.animationFallback = String(Boolean(diagnostic.fallback));
+        companion.element.dataset.animationDiagnostic = diagnostic.fallbackReason || diagnostic.status || "ready";
+      },
+    });
     this.applyCompanionStyle(companion);
     this.bindPointer(companion);
     return companion;
   }
 
   applyCompanionStyle(companion) {
-    companion.body.style.setProperty("--sprite-url", `url("${SPRITES[companion.type].url}")`);
     const baseSize = window.innerWidth <= 520 ? 76 : window.innerWidth <= 760 ? 88 : 112;
     companion.element.style.setProperty("--companion-size", `${Math.round(baseSize * this.settings.scale)}px`);
   }
@@ -1982,7 +1982,7 @@ export class SpriteReactionEngine {
       companion.dragOffsetX = event.clientX - rect.left;
       companion.dragOffsetY = event.clientY - rect.top;
       element.classList.add("dragging");
-      this.setState(companion, "idle");
+      this.setState(companion, "dragging");
       element.setPointerCapture?.(event.pointerId);
       this.notify("drag", { phase: "start" });
       event.preventDefault();
@@ -2227,11 +2227,12 @@ export class SpriteReactionEngine {
   }
 
   setState(companion, state) {
-    const nextState = SPRITE_STATES.includes(state) ? state : "idle";
+    const nextState = CHARACTER_STATES.includes(state) ? state : "idle";
     companion.element.classList.remove(...STATE_CLASSES);
     companion.element.classList.add(`state-${nextState}`);
     companion.element.dataset.state = nextState;
     companion.state = nextState;
+    companion.animation?.setState(nextState);
     this.updateContentLayer(companion);
   }
 
@@ -2280,6 +2281,7 @@ export class SpriteReactionEngine {
         companion.x = nextX;
         companion.y = nextY;
         companion.element.classList.toggle("facing-left", dx < 0);
+        companion.animation?.setFacing(dx < 0 ? "left" : "right");
       }
       this.setState(companion, "walk");
       this.render(companion);

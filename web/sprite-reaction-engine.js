@@ -6,6 +6,7 @@ const SPRITES = {
 };
 
 const SPRITE_ORDER = ["explorer", "wizard", "mechanic", "orb"];
+export const SPRITE_CHARACTER_SELECTIONS = Object.freeze(["auto", ...SPRITE_ORDER]);
 
 export const SPRITE_STATES = Object.freeze([
   "idle",
@@ -268,12 +269,21 @@ function resetPhrase(seconds) {
 function reaction(values) {
   return {
     key: values.key,
+    triggerId: values.triggerId || values.key,
+    triggerName: values.triggerName || values.name || values.key,
     signature: values.signature || values.key,
     topic: values.topic || values.key,
     priority: values.priority || 0,
     anchor: values.anchor || null,
     state: SPRITE_STATES.includes(values.state) ? values.state : "talk",
     message: String(values.message || "").trim(),
+    character: SPRITE_CHARACTER_SELECTIONS.includes(values.character) ? values.character : "auto",
+    characterMessages: isPlainObject(values.characterMessages) ? { ...values.characterMessages } : {},
+    fallbackMessage: String(values.fallbackMessage || "").trim(),
+    preventRepeat: values.preventRepeat !== false,
+    repeatWhileActive: values.repeatWhileActive !== false,
+    matchedValues: isPlainObject(values.matchedValues) ? { ...values.matchedValues } : {},
+    source: values.source || "runtime",
     durationMs: values.durationMs ?? 4600,
     cooldownMs: values.cooldownMs ?? 60_000,
     persistent: Boolean(values.persistent),
@@ -725,6 +735,15 @@ export function validateSpriteBehaviorConfig(raw) {
   }
   const validatePhraseMacros = (text, path) => {
     if (typeof text !== "string" || !isPlainObject(raw.macros)) return;
+    const tokenLikeValues = text.match(/{{[^{}]*}}/g) || [];
+    tokenLikeValues.forEach(token => {
+      if (!/^{{\s*[a-z][a-z0-9_]*\s*}}$/.test(token)) {
+        errors.push(configIssue(path, "malformed_macro", `Macro malformada: ${token}.`));
+      }
+    });
+    const opens = (text.match(/{{/g) || []).length;
+    const closes = (text.match(/}}/g) || []).length;
+    if (opens !== closes) errors.push(configIssue(path, "malformed_macro", "A fala possui chaves de macro desbalanceadas."));
     for (const match of text.matchAll(/{{\s*([\w_]+)\s*}}/g)) {
       if (!raw.macros[match[1]]) {
         errors.push(configIssue(path, "unknown_macro", `Macro não declarada: ${match[1]}.`));
@@ -767,11 +786,21 @@ export function validateSpriteBehaviorConfig(raw) {
         return;
       }
       validateAllowedProperties(trigger, [
-        "id", "enabled", "when", "targetCard", "spriteState", "phrases", "phraseRefs",
-        "priority", "cooldownSeconds", "durationSeconds", "persistent", "holdSeconds",
+        "id", "name", "enabled", "when", "targetCard", "spriteState", "character", "topic",
+        "phrases", "phraseRefs", "characterPhrases", "fallbackPhrase", "preventRepeat",
+        "priority", "cooldownSeconds", "durationSeconds", "persistent", "repeatWhileActive", "holdSeconds",
       ], path, errors);
       if (ids.has(trigger.id)) errors.push(configIssue(`${path}.id`, "duplicate_id", `ID duplicado: ${trigger.id}.`));
       ids.add(trigger.id);
+      if (trigger.name !== undefined && (typeof trigger.name !== "string" || !trigger.name.trim() || trigger.name.length > 80)) {
+        errors.push(configIssue(`${path}.name`, "invalid_name", "name deve ter entre 1 e 80 caracteres."));
+      }
+      if (trigger.character !== undefined && !SPRITE_CHARACTER_SELECTIONS.includes(trigger.character)) {
+        errors.push(configIssue(`${path}.character`, "invalid_character", `Personagem desconhecido: ${trigger.character}.`));
+      }
+      if (trigger.topic !== undefined && (typeof trigger.topic !== "string" || !/^[a-z][a-z0-9_]*$/.test(trigger.topic))) {
+        errors.push(configIssue(`${path}.topic`, "invalid_id", "topic deve usar um identificador seguro."));
+      }
       if (!/^[a-z][a-z0-9_]*$/.test(trigger.id)) errors.push(configIssue(`${path}.id`, "invalid_id", "ID de gatilho inválido."));
       if (typeof trigger.enabled !== "boolean") errors.push(configIssue(`${path}.enabled`, "invalid_boolean", "enabled deve ser booleano."));
       validateWhenNode(trigger.when, `${path}.when`, errors);
@@ -781,13 +810,37 @@ export function validateSpriteBehaviorConfig(raw) {
       if (typeof trigger.targetCard !== "string" || !raw.cards?.[trigger.targetCard]) {
         errors.push(configIssue(`${path}.targetCard`, "unknown_card", `Card não configurado: ${trigger.targetCard}.`));
       }
+      const characterPhrasesValid = isPlainObject(trigger.characterPhrases)
+        && Object.keys(trigger.characterPhrases).length > 0
+        && Object.entries(trigger.characterPhrases).every(([character, texts]) => (
+          SPRITE_ORDER.includes(character)
+          && Array.isArray(texts)
+          && texts.length
+          && texts.every(text => typeof text === "string" && text.length >= 1 && text.length <= 160)
+        ));
+      const fallbackValid = typeof trigger.fallbackPhrase === "string"
+        && trigger.fallbackPhrase.length >= 1
+        && trigger.fallbackPhrase.length <= 160;
       if ((!Array.isArray(trigger.phrases) || !trigger.phrases.length || !trigger.phrases.every(text => typeof text === "string" && text.length >= 1 && text.length <= 160))
-        && (!Array.isArray(trigger.phraseRefs) || !trigger.phraseRefs.length || !trigger.phraseRefs.every(id => typeof id === "string"))) {
-        errors.push(configIssue(`${path}.phrases`, "missing_trigger_phrase", "Gatilho requer phrases ou phraseRefs."));
+        && (!Array.isArray(trigger.phraseRefs) || !trigger.phraseRefs.length || !trigger.phraseRefs.every(id => typeof id === "string"))
+        && !characterPhrasesValid
+        && !fallbackValid) {
+        errors.push(configIssue(`${path}.phrases`, "missing_trigger_phrase", "Gatilho requer phrases, phraseRefs, falas por personagem ou fallback."));
       }
       if (Array.isArray(trigger.phrases) && new Set(trigger.phrases).size !== trigger.phrases.length) errors.push(configIssue(`${path}.phrases`, "duplicate_phrase", "Gatilho não pode repetir falas."));
       if (Array.isArray(trigger.phraseRefs) && new Set(trigger.phraseRefs).size !== trigger.phraseRefs.length) errors.push(configIssue(`${path}.phraseRefs`, "duplicate_phrase_ref", "Gatilho não pode repetir phraseRefs."));
       (Array.isArray(trigger.phrases) ? trigger.phrases : []).forEach((text, textIndex) => validatePhraseMacros(text, `${path}.phrases[${textIndex}]`));
+      if (trigger.characterPhrases !== undefined && !characterPhrasesValid) {
+        errors.push(configIssue(`${path}.characterPhrases`, "invalid_character_phrases", "Falas por personagem devem usar personagens conhecidos e textos válidos."));
+      }
+      Object.entries(isPlainObject(trigger.characterPhrases) ? trigger.characterPhrases : {}).forEach(([character, texts]) => {
+        if (new Set(texts || []).size !== (texts || []).length) errors.push(configIssue(`${path}.characterPhrases.${character}`, "duplicate_phrase", "O personagem não pode repetir a mesma fala."));
+        (texts || []).forEach((text, textIndex) => validatePhraseMacros(text, `${path}.characterPhrases.${character}[${textIndex}]`));
+      });
+      if (trigger.fallbackPhrase !== undefined) {
+        if (!fallbackValid) errors.push(configIssue(`${path}.fallbackPhrase`, "invalid_phrase_texts", "fallbackPhrase deve ser uma fala válida."));
+        else validatePhraseMacros(trigger.fallbackPhrase, `${path}.fallbackPhrase`);
+      }
       (Array.isArray(trigger.phraseRefs) ? trigger.phraseRefs : []).forEach((id, referenceIndex) => {
         if (!phraseIds.has(id)) errors.push(configIssue(`${path}.phraseRefs[${referenceIndex}]`, "unknown_phrase_ref", `Grupo de falas não encontrado: ${id}.`));
       });
@@ -796,6 +849,8 @@ export function validateSpriteBehaviorConfig(raw) {
       if (trigger.durationSeconds !== undefined) validateBoundedNumber(trigger.durationSeconds, `${path}.durationSeconds`, errors, { maximum: 120 });
       if (trigger.holdSeconds !== undefined) validateBoundedNumber(trigger.holdSeconds, `${path}.holdSeconds`, errors, { maximum: 120 });
       if (trigger.persistent !== undefined && typeof trigger.persistent !== "boolean") errors.push(configIssue(`${path}.persistent`, "invalid_boolean", "persistent deve ser booleano."));
+      if (trigger.repeatWhileActive !== undefined && typeof trigger.repeatWhileActive !== "boolean") errors.push(configIssue(`${path}.repeatWhileActive`, "invalid_boolean", "repeatWhileActive deve ser booleano."));
+      if (trigger.preventRepeat !== undefined && typeof trigger.preventRepeat !== "boolean") errors.push(configIssue(`${path}.preventRepeat`, "invalid_boolean", "preventRepeat deve ser booleano."));
     });
   }
   const valid = errors.length === 0;
@@ -981,27 +1036,67 @@ export function evaluateSpriteCondition(when, runtime = {}) {
 
 export const evaluateCondition = evaluateSpriteCondition;
 
-function triggerEventDescriptor(trigger) {
-  const findEvent = node => {
-    if (!node || typeof node !== "object") return null;
-    if (node.event?.type) return node.event;
-    for (const child of [...(node.all || []), ...(node.any || [])]) {
-      const type = findEvent(child);
-      if (type) return type;
+export function collectSpriteConditionValues(when, runtime = {}) {
+  const values = {};
+  const visit = node => {
+    if (!isPlainObject(node)) return;
+    if (Array.isArray(node.all)) {
+      node.all.forEach(visit);
+      return;
     }
-    return null;
+    if (Array.isArray(node.any)) {
+      node.any.filter(child => evaluateSpriteCondition(child, runtime)).forEach(visit);
+      return;
+    }
+    if (node.metric) values[node.metric] = metricValue(node.metric, runtime.context, runtime.config);
+    if (node.timeRange) values.hora = runtime.context?.clock?.time ?? null;
+    if (node.event?.type) {
+      values[`evento:${node.event.type}`] = true;
+      if (node.event.type.startsWith("collection_")) values.coleta_status = runtime.context?.collection?.status ?? null;
+      if (node.event.type === "value_change" && node.event.metric) values[node.event.metric] = metricValue(node.event.metric, runtime.context, runtime.config);
+      if (node.event.type === "user_return") values.tempo_sem_interacao = runtime.context?.idleSeconds ?? null;
+      if (runtime.event?.card) values.card_evento = runtime.event.card;
+      if (runtime.event?.phase) values.fase_arraste = runtime.event.phase;
+    }
   };
-  return findEvent(trigger.when);
+  visit(when);
+  return values;
 }
 
-function triggerEventType(trigger) {
-  return triggerEventDescriptor(trigger)?.type || null;
+function triggerEventDescriptors(trigger) {
+  const events = [];
+  const visit = node => {
+    if (!node || typeof node !== "object") return;
+    if (node.event?.type) events.push(node.event);
+    [...(node.all || []), ...(node.any || [])].forEach(visit);
+  };
+  visit(trigger.when);
+  return events;
+}
+
+
+function triggerEventDescriptor(trigger, type = null) {
+  const events = triggerEventDescriptors(trigger);
+  return (type ? events.find(event => event.type === type) : events[0]) || null;
+}
+
+function triggerHasEventType(trigger, type) {
+  return triggerEventDescriptors(trigger).some(event => event.type === type);
 }
 
 function triggerPhrasePool(trigger, config) {
   const phrases = Array.isArray(trigger.phrases) ? [...trigger.phrases] : [];
   (trigger.phraseRefs || []).forEach(id => phrases.push(...(config._compiled?.phrasesById?.[id] || [])));
   return phrases;
+}
+
+function triggerCharacterPhrasePool(trigger, character) {
+  const phrases = trigger.characterPhrases?.[character];
+  return Array.isArray(phrases) ? [...phrases] : [];
+}
+
+function selectPhraseTemplate(pool, random) {
+  return pool.length ? pool[Math.floor(random() * pool.length) % pool.length] : "";
 }
 
 export function evaluateConfiguredTriggers(input, behaviorConfig, options = {}) {
@@ -1013,17 +1108,29 @@ export function evaluateConfiguredTriggers(input, behaviorConfig, options = {}) 
   const macros = resolveSpriteMacroValues(context, config);
   const events = [];
   config.triggers.forEach(trigger => {
-    const eventType = triggerEventType(trigger);
-    if (options.event && options.eventOnly !== false && eventType !== options.event.type) return;
-    if (trigger.enabled === false || !evaluateSpriteCondition(trigger.when, {
+    const declaredEvents = triggerEventDescriptors(trigger);
+    const declaredEventTypes = declaredEvents.map(event => event.type);
+    if (options.event && options.eventOnly !== false && !declaredEventTypes.includes(options.event.type)) return;
+    if (options.event?.triggerId && trigger.id !== options.event.triggerId) return;
+    const runtime = {
       context,
       previousContext: options.previousContext || null,
       event: options.event || null,
       config,
-    })) return;
+    };
+    if (trigger.enabled === false || !evaluateSpriteCondition(trigger.when, runtime)) return;
+    const eventDescriptor = options.event && declaredEventTypes.includes(options.event.type)
+      ? declaredEvents.find(event => event.type === options.event.type)
+      : declaredEvents.find(event => evaluateSpriteCondition({ event }, runtime)) || null;
+    const eventType = eventDescriptor?.type || null;
     const pool = triggerPhrasePool(trigger, config);
-    const template = pool.length ? pool[Math.floor(random() * pool.length) % pool.length] : "";
-    const eventDescriptor = triggerEventDescriptor(trigger);
+    const fallbackMessage = renderSpritePhrase(trigger.fallbackPhrase || "", macros);
+    const characterMessages = Object.fromEntries(SPRITE_ORDER.map(character => {
+      const characterPool = triggerCharacterPhrasePool(trigger, character);
+      const characterTemplate = selectPhraseTemplate(characterPool, random);
+      return [character, renderSpritePhrase(characterTemplate, macros)];
+    }).filter(([, message]) => message));
+    const template = selectPhraseTemplate(pool, random);
     const changingMetric = eventType === "value_change" ? eventDescriptor?.metric : null;
     const signatureValue = changingMetric ? metricValue(changingMetric, context, config) : eventType && options.event ? options.event.sequence || eventType : "active";
     const derivedTransient = ["collection_recovery", "value_change"].includes(eventType);
@@ -1034,12 +1141,20 @@ export function evaluateConfiguredTriggers(input, behaviorConfig, options = {}) 
     );
     events.push(reaction({
       key: trigger.id,
+      triggerId: trigger.id,
+      triggerName: trigger.name || trigger.id,
       signature: `${trigger.id}:${signatureValue}`,
       topic: trigger.topic || trigger.targetCard || trigger.id,
       priority: Number(trigger.priority) || 0,
       anchor: trigger.targetCard,
       state: trigger.spriteState,
-      message: renderSpritePhrase(template, macros),
+      message: renderSpritePhrase(template, macros) || fallbackMessage,
+      character: trigger.character || "auto",
+      characterMessages,
+      fallbackMessage,
+      preventRepeat: trigger.preventRepeat !== false,
+      repeatWhileActive: trigger.repeatWhileActive !== false,
+      matchedValues: collectSpriteConditionValues(trigger.when, runtime),
       durationMs: Math.max(0, Number(trigger.durationSeconds ?? config.defaultBehavior.reactionDurationSeconds ?? 5) * 1000),
       cooldownMs: configuredCooldownSeconds * 1000,
       persistent: Boolean(trigger.persistent),
@@ -1308,7 +1423,8 @@ export class ReactionEventQueue {
       const lastDispatched = this.lastDispatchedAt.get(event.key);
       const changed = previousSignature === undefined || previousSignature !== event.signature;
       const cooledDown = lastDispatched === undefined || observedAt - lastDispatched >= event.cooldownMs;
-      if ((event.transient && cooledDown) || (!event.transient && (changed || cooledDown))) {
+      const canRepeat = event.repeatWhileActive !== false;
+      if ((event.transient && cooledDown) || (!event.transient && (changed || (canRepeat && cooledDown)))) {
         this._push({ ...event, queuedAt: observedAt });
       }
     });
@@ -1369,12 +1485,21 @@ export class ReactionEventQueue {
   }
 }
 
+function companionMatchesEvent(companion, event = {}) {
+  if (event.character && event.character !== "auto") return companion.type === event.character;
+  const hasGenericMessage = Boolean(event.message || event.fallbackMessage);
+  const hasCharacterMessages = Object.keys(event.characterMessages || {}).length > 0;
+  return hasGenericMessage || !hasCharacterMessages || Boolean(event.characterMessages?.[companion.type]);
+}
+
+
 export function selectCompanion(companions = [], event = {}, lastSpeakerId = null, now = Date.now()) {
   const available = companions.filter(companion => (
     !companion.dragging
     && !companion.reaction
     && !companion.pinnedKey
     && Number(companion.busyUntil || 0) <= now
+    && companionMatchesEvent(companion, event)
   ));
   if (!available.length) return null;
   return [...available].sort((left, right) => {
@@ -1396,6 +1521,7 @@ export function selectPreemptableCompanion(companions = [], event = {}) {
       && !companion.reaction
       && companion.pinnedEvent
       && Number(companion.pinnedEvent.priority || 0) < Number(event.priority || 0)
+      && companionMatchesEvent(companion, event)
     ))
     .sort((left, right) => (
       Number(left.pinnedEvent.priority || 0) - Number(right.pinnedEvent.priority || 0)
@@ -1423,11 +1549,12 @@ function rectAt(x, y, size, inset = 0.12) {
 }
 
 export class SpriteReactionEngine {
-  constructor({ root, getContext, onHumanInteraction, thresholds, cooldowns, now, random, behaviorConfig = null, configReport = null } = {}) {
+  constructor({ root, getContext, onHumanInteraction, onReaction, thresholds, cooldowns, now, random, behaviorConfig = null, configReport = null } = {}) {
     if (!root) throw new Error("SpriteReactionEngine requer um elemento root.");
     this.root = root;
     this.getContext = getContext;
     this.onHumanInteraction = onHumanInteraction;
+    this.onReaction = typeof onReaction === "function" ? onReaction : null;
     this.thresholds = mergeThresholds(thresholds);
     this.cooldowns = { ...DEFAULT_COOLDOWNS, ...(cooldowns || {}) };
     this.now = typeof now === "function" ? now : () => Date.now();
@@ -1471,12 +1598,12 @@ export class SpriteReactionEngine {
     this.started = false;
     this.frameRequest = null;
     this.nextContextAt = 0;
-    const randomTrigger = this.behaviorConfig?.triggers?.find(trigger => triggerEventType(trigger) === "random_interval");
-    const casualInterval = triggerEventDescriptor(randomTrigger)?.intervalSeconds
-      || this.behaviorConfig?.defaultBehavior?.casualSpeech?.intervalSeconds;
+    const casualInterval = this.behaviorConfig?.defaultBehavior?.casualSpeech?.intervalSeconds;
     const casualMinimum = Math.max(12, finiteNumber(casualInterval?.min) || 15);
     const casualMaximum = Math.max(casualMinimum, finiteNumber(casualInterval?.max) || casualMinimum);
     this.nextAmbientAt = this.now() + randomBetween(casualMinimum, casualMaximum, this.random) * 1000;
+    this.randomTriggerDue = new Map();
+    this.syncRandomTriggerSchedules(this.now(), true);
     this.ambientCursor = 0;
     this.protectedRects = [];
     this.protectedRectsAt = 0;
@@ -1500,6 +1627,7 @@ export class SpriteReactionEngine {
 
   setBehaviors(rawConfig, report = null) {
     const previousConfig = this.behaviorConfig;
+    const previousInitialState = previousConfig?.defaultBehavior?.initialState;
     const compiled = rawConfig?._compiled
       ? { valid: true, config: rawConfig, errors: [] }
       : compileSpriteBehaviorConfig(rawConfig);
@@ -1522,7 +1650,27 @@ export class SpriteReactionEngine {
     this.bindConfiguredCardEvents();
     this.queue.clear();
     this.hasContext = false;
+    this.syncRandomTriggerSchedules(this.now(), true);
+    if (this.started && this.behaviorConfig?.defaultBehavior?.initialState !== previousInitialState) this.rebuild();
     return this.configReport;
+  }
+
+  syncRandomTriggerSchedules(wallNow = this.now(), reset = false) {
+    const triggers = (this.behaviorConfig?.triggers || []).filter(trigger => (
+      trigger.enabled !== false && triggerHasEventType(trigger, "random_interval")
+    ));
+    const activeIds = new Set(triggers.map(trigger => trigger.id));
+    [...this.randomTriggerDue.keys()].forEach(id => {
+      if (!activeIds.has(id)) this.randomTriggerDue.delete(id);
+    });
+    triggers.forEach(trigger => {
+      if (!reset && this.randomTriggerDue.has(trigger.id)) return;
+      const interval = triggerEventDescriptor(trigger, "random_interval")?.intervalSeconds || {};
+      const minimum = Math.max(1, finiteNumber(interval.min) ?? 20);
+      const maximum = Math.max(minimum, finiteNumber(interval.max) ?? minimum);
+      this.randomTriggerDue.set(trigger.id, wallNow + randomBetween(minimum, maximum, this.random) * 1000);
+    });
+    return triggers;
   }
 
   bindConfiguredCardEvents() {
@@ -1530,7 +1678,6 @@ export class SpriteReactionEngine {
     this.cardEventBindings = [];
     if (!this.behaviorConfig) return;
     Object.entries(this.behaviorConfig.cards || {}).forEach(([card, selector]) => {
-      if (card === "status") return;
       let element = null;
       try { element = document.querySelector(selector); } catch {}
       if (!element) return;
@@ -1681,9 +1828,6 @@ export class SpriteReactionEngine {
     let queued = false;
     events.forEach(event => {
       let candidate = preferredCompanion && type === "drag" ? { ...event, anchor: null } : event;
-      if (type === "random_interval") {
-        candidate = { ...candidate, cooldownMs: Math.max(8000, this.settings.talkInterval * 1000) };
-      }
       queued = this.queue.enqueueTransient(candidate) || queued;
     });
     if (!queued) return false;
@@ -1694,11 +1838,14 @@ export class SpriteReactionEngine {
       && !preferredCompanion.reaction
       && !preferredCompanion.pinnedKey
       && Number(preferredCompanion.busyUntil || 0) <= wallNow
+      && events.some(event => companionMatchesEvent(preferredCompanion, event))
       && !this.companions.some(companion => companion !== preferredCompanion && (
         companion.reaction || (companion.bubbleUntil && companion.bubbleUntil > wallNow)
       ));
     if (canUsePreferred) {
-      const selected = this.queue.dequeue(event => events.some(candidate => candidate.key === event.key));
+      const selected = this.queue.dequeue(event => (
+        events.some(candidate => candidate.key === event.key) && companionMatchesEvent(preferredCompanion, event)
+      ));
       if (selected) return this.dispatchReaction(preferredCompanion, selected);
     }
     this.tryDispatch();
@@ -1805,6 +1952,7 @@ export class SpriteReactionEngine {
       nextRoamAt: this.now() + randomBetween(2500, 7000, this.random),
       lastSpokeAt: 0,
       lastTopic: null,
+      lastDragNotifyAt: 0,
     };
     companion.nameElement.textContent = companion.name;
     this.applyCompanionStyle(companion);
@@ -1836,6 +1984,7 @@ export class SpriteReactionEngine {
       element.classList.add("dragging");
       this.setState(companion, "idle");
       element.setPointerCapture?.(event.pointerId);
+      this.notify("drag", { phase: "start" });
       event.preventDefault();
     });
     element.addEventListener("pointermove", event => {
@@ -1846,6 +1995,10 @@ export class SpriteReactionEngine {
       companion.y = clamp(event.clientY - companion.dragOffsetY, bounds.minY, bounds.maxY);
       companion.targetX = companion.x;
       companion.targetY = companion.y;
+      if (this.now() - companion.lastDragNotifyAt >= 500) {
+        companion.lastDragNotifyAt = this.now();
+        this.notify("drag", { phase: "move" });
+      }
       this.render(companion);
       event.preventDefault();
     });
@@ -2233,17 +2386,50 @@ export class SpriteReactionEngine {
     }
   }
 
+  playTemporary(event) {
+    if (!event || !this.settings.enabled || !this.settings.reactions) {
+      return { played: false, reason: "Reações ou sprites estão desativados." };
+    }
+    const preview = reaction({
+      ...event,
+      key: `studio_preview_${++this.eventSequence}`,
+      triggerId: event.triggerId || event.key,
+      triggerName: event.triggerName || event.name || event.key,
+      signature: `studio-preview:${this.eventSequence}`,
+      source: "studio",
+      transient: true,
+      persistent: false,
+      holdMs: 0,
+      repeatWhileActive: false,
+    });
+    const wallNow = this.now();
+    let companion = selectCompanion(this.companions, preview, this.lastSpeakerId, wallNow);
+    if (!companion) companion = selectPreemptableCompanion(this.companions, preview);
+    if (!companion) return { played: false, reason: "Nenhum personagem compatível está disponível agora." };
+    if (companion.pinnedKey) this.releasePinned(companion, false);
+    return { played: this.dispatchReaction(companion, preview), companion: companion.type };
+  }
+
   dispatchReaction(companion, event) {
     if (!companion || !event) return false;
+    const characterMessage = event.characterMessages?.[companion.type];
+    event = {
+      ...event,
+      message: characterMessage || event.message || event.fallbackMessage || "",
+    };
     const duplicateWindowMs = Math.max(
       0,
       finiteNumber(this.behaviorConfig?.defaultBehavior?.coordination?.duplicatePhraseWindowSeconds) || 0,
     ) * 1000;
     const recent = event.message ? this.recentSpeech.get(event.message) : null;
-    const duplicateFromAnother = recent
-      && recent.companionId !== companion.id
-      && this.now() - recent.at < duplicateWindowMs;
-    if (duplicateFromAnother) event = { ...event, message: "" };
+    const duplicateInWindow = event.preventRepeat !== false
+      && recent
+      && this.now() - recent.at < duplicateWindowMs
+      && recent.companionId !== undefined;
+    if (duplicateInWindow) {
+      const fallback = event.fallbackMessage && event.fallbackMessage !== event.message ? event.fallbackMessage : "";
+      event = { ...event, message: fallback };
+    }
     companion.reaction = { ...event, stage: "travel" };
     companion.pinnedKey = null;
     companion.pinnedEvent = null;
@@ -2261,6 +2447,27 @@ export class SpriteReactionEngine {
       companion.targetY = companion.y;
       this.beginArrival(companion, this.now());
     }
+    if (this.onReaction) {
+      const historyEntry = {
+        triggerId: event.triggerId || event.key,
+        triggerName: event.triggerName || event.triggerId || event.key,
+        timestamp: new Date(this.now()).toISOString(),
+        values: event.matchedValues || {},
+        character: companion.type,
+        card: event.anchor,
+        phrase: event.message,
+        state: event.state,
+        priority: event.priority,
+        durationSeconds: event.durationMs / 1000,
+        cooldownSeconds: event.cooldownMs / 1000,
+        holdSeconds: event.holdMs / 1000,
+        result: "executado",
+        source: event.source || "runtime",
+      };
+      try {
+        Promise.resolve(this.onReaction(historyEntry)).catch(() => {});
+      } catch {}
+    }
     return true;
   }
 
@@ -2276,20 +2483,34 @@ export class SpriteReactionEngine {
       this.companions.length,
     );
     if (presentingCount >= maxConcurrent) return false;
-    const nextEvent = this.queue.pending[0];
-    let companion = selectCompanion(this.companions, nextEvent, this.lastSpeakerId, wallNow);
-    if (!companion && nextEvent) {
-      companion = selectPreemptableCompanion(this.companions, nextEvent);
-      if (companion) {
-        const displacedEvent = companion.pinnedEvent;
-        this.releasePinned(companion, false);
-        if (displacedEvent && this.queue.hasActive(displacedEvent.key)) {
-          this.queue.enqueue(displacedEvent, { force: true, transient: false });
-        }
+    let nextEvent = null;
+    let companion = null;
+    for (const candidate of this.queue.pending) {
+      const available = selectCompanion(this.companions, candidate, this.lastSpeakerId, wallNow);
+      if (!available) continue;
+      nextEvent = candidate;
+      companion = available;
+      break;
+    }
+    let displacedEvent = null;
+    if (!companion) {
+      for (const candidate of this.queue.pending) {
+        const preemptable = selectPreemptableCompanion(this.companions, candidate);
+        if (!preemptable) continue;
+        nextEvent = candidate;
+        companion = preemptable;
+        displacedEvent = companion.pinnedEvent;
+        break;
       }
     }
     if (!companion) return false;
-    const event = this.queue.dequeue(() => true);
+    if (displacedEvent) {
+      this.releasePinned(companion, false);
+      if (this.queue.hasActive(displacedEvent.key)) {
+        this.queue.enqueue(displacedEvent, { force: true, transient: false });
+      }
+    }
+    const event = this.queue.dequeue(candidate => candidate === nextEvent);
     if (!event) return false;
     return this.dispatchReaction(companion, event);
   }
@@ -2303,6 +2524,7 @@ export class SpriteReactionEngine {
     companion.lastSpokeAt = this.now();
     this.lastSpeakerId = companion.id;
     this.recentSpeech.set(cleanMessage, { at: this.now(), companionId: companion.id });
+    this.refreshProtectedRects(true);
     this.updateBubblePlacement(companion);
   }
 
@@ -2361,7 +2583,7 @@ export class SpriteReactionEngine {
         + Math.max(0, rect.bottom - window.innerHeight);
       let score = placement.preference + overflow * 10_000;
       this.refreshProtectedRects().forEach(protectedRect => {
-        score += rectIntersectionArea(rect, protectedRect, 3) * 120;
+        score += rectIntersectionArea(rect, protectedRect, 14) * 120;
       });
       this.companions.forEach(other => {
         if (other === companion) return;
@@ -2401,7 +2623,6 @@ export class SpriteReactionEngine {
       }
       return;
     }
-    if (this.behaviorConfig && this.notify("random_interval", { source: "sprite" }, companion)) return;
     const events = evaluateReactions(this.context, this.thresholds, this.cooldowns);
     const recentWindow = Math.max(8000, this.settings.talkInterval * 1000);
     const event = events.find(candidate => {
@@ -2421,44 +2642,47 @@ export class SpriteReactionEngine {
   }
 
   enqueueAmbientIfDue(wallNow) {
-    if (!this.settings.speech || wallNow < this.nextAmbientAt || this.queue.size || this.companions.some(companion => companion.reaction)) return;
+    if (!this.settings.speech || this.queue.size || this.companions.some(companion => companion.reaction)) return;
     if (this.behaviorConfig) {
-      const randomTrigger = this.behaviorConfig.triggers?.find(trigger => (
-        trigger.enabled !== false && triggerEventType(trigger) === "random_interval"
-      ));
+      const randomTriggers = this.syncRandomTriggerSchedules(wallNow);
+      const dueTrigger = randomTriggers
+        .filter(trigger => wallNow >= (this.randomTriggerDue.get(trigger.id) || Number.POSITIVE_INFINITY))
+        .sort((left, right) => (this.randomTriggerDue.get(left.id) || 0) - (this.randomTriggerDue.get(right.id) || 0))[0];
+      if (dueTrigger) {
+        this.notify("random_interval", { source: "timer", triggerId: dueTrigger.id });
+        const interval = triggerEventDescriptor(dueTrigger, "random_interval")?.intervalSeconds || {};
+        const minimum = Math.max(1, finiteNumber(interval.min) ?? 20);
+        const maximum = Math.max(minimum, finiteNumber(interval.max) ?? minimum);
+        this.randomTriggerDue.set(dueTrigger.id, wallNow + randomBetween(minimum, maximum, this.random) * 1000);
+        return;
+      }
+      if (randomTriggers.length || wallNow < this.nextAmbientAt) return;
       if (this.behaviorConfig.defaultBehavior?.casualSpeech?.enabled !== false) {
-        if (randomTrigger) {
-          this.notify("random_interval", { source: "timer" });
-        } else {
-          const phraseIds = this.behaviorConfig.defaultBehavior?.casualSpeech?.phraseIds || [];
-          const phrasePool = phraseIds.flatMap(id => this.behaviorConfig._compiled?.phrasesById?.[id] || []);
-          if (phrasePool.length) {
-            const template = phrasePool[Math.floor(this.random() * phrasePool.length) % phrasePool.length];
-            const destinations = this.behaviorConfig.defaultBehavior?.allowedDestinations || [];
-            const anchor = destinations.length
-              ? destinations[Math.floor(this.random() * destinations.length) % destinations.length]
-              : null;
-            this.queue.enqueueTransient(reaction({
-              key: "configured-casual",
-              topic: anchor || "casual",
-              priority: 10,
-              anchor,
-              state: "talk",
-              message: renderSpritePhrase(template, resolveSpriteMacroValues(this.context, this.behaviorConfig)),
-              cooldownMs: Math.max(8000, this.settings.talkInterval * 1000),
-              transient: true,
-            }));
-          }
+        const phraseIds = this.behaviorConfig.defaultBehavior?.casualSpeech?.phraseIds || [];
+        const phrasePool = phraseIds.flatMap(id => this.behaviorConfig._compiled?.phrasesById?.[id] || []);
+        if (phrasePool.length) {
+          const template = phrasePool[Math.floor(this.random() * phrasePool.length) % phrasePool.length];
+          const destinations = this.behaviorConfig.defaultBehavior?.allowedDestinations || [];
+          const anchor = destinations.length
+            ? destinations[Math.floor(this.random() * destinations.length) % destinations.length]
+            : null;
+          this.queue.enqueueTransient(reaction({
+            key: "configured-casual",
+            topic: anchor || "casual",
+            priority: 10,
+            anchor,
+            state: "talk",
+            message: renderSpritePhrase(template, resolveSpriteMacroValues(this.context, this.behaviorConfig)),
+            cooldownMs: Math.max(8000, this.settings.talkInterval * 1000),
+            transient: true,
+          }));
         }
       }
-      const declaredInterval = triggerEventDescriptor(randomTrigger)?.intervalSeconds
-        || this.behaviorConfig.defaultBehavior?.casualSpeech?.intervalSeconds;
+      const declaredInterval = this.behaviorConfig.defaultBehavior?.casualSpeech?.intervalSeconds;
       const configuredMinimum = finiteNumber(declaredInterval?.min);
       const configuredMaximum = finiteNumber(declaredInterval?.max);
-      const minimum = Math.max(12, this.settings.talkInterval);
-      const maximum = configuredMinimum !== null && minimum >= configuredMinimum
-        ? Math.max(minimum, configuredMaximum || minimum)
-        : Math.max(minimum, Math.min(configuredMaximum || minimum + 3.5, minimum + 3.5));
+      const minimum = Math.max(12, configuredMinimum ?? this.settings.talkInterval);
+      const maximum = Math.max(minimum, configuredMaximum ?? minimum);
       this.nextAmbientAt = wallNow + randomBetween(minimum, maximum, this.random) * 1000;
       return;
     }

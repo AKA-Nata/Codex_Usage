@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#0b1020" />
   <title>Codex Pulse</title>
   <link rel="stylesheet" href="./app.css" />
+  <link rel="stylesheet" href="./behavior-studio.css" />
 </head>
 <body>
   <video id="bgVideo" class="bg-video" muted loop playsinline></video>
@@ -31,7 +32,8 @@
         </div>
         <div class="top-actions" data-sprite-protected>
           <button id="refreshButton" class="button primary" type="button" title="Atualizar agora">↻ <span>Atualizar</span></button>
-          <button id="openStudio" class="icon-button" type="button" aria-label="Abrir personalização" title="Personalizar">⚙</button>
+          <button id="openBehaviorStudio" class="icon-button" type="button" aria-label="Abrir Studio de comportamentos" title="Comportamentos">✦</button>
+          <button id="openStudio" class="icon-button" type="button" aria-label="Abrir personalização" title="Aparência">⚙</button>
         </div>
       </div>
     </header>
@@ -107,9 +109,9 @@
   <div id="spriteWorld" class="sprite-world" aria-live="polite"></div>
 
   <div id="studioBackdrop" class="studio-backdrop"></div>
-  <aside id="studio" class="studio" aria-label="Estúdio de personalização" aria-hidden="true" data-sprite-protected>
+  <aside id="studio" class="studio" aria-label="Estúdio de aparência" aria-hidden="true" data-sprite-protected>
     <header class="studio-head">
-      <div><p class="eyebrow">Estúdio visual</p><h2>Personalize tudo</h2></div>
+      <div><p class="eyebrow">Aparência</p><h2>Personalize o painel</h2></div>
       <button id="closeStudio" class="icon-button" type="button" aria-label="Fechar personalização">×</button>
     </header>
     <div class="studio-scroll">
@@ -178,6 +180,61 @@
       </div>
     </div>
   </aside>
+
+  <div id="behaviorStudioBackdrop" class="behavior-studio-backdrop" aria-hidden="true"></div>
+  <section id="behaviorStudio" class="behavior-studio" role="dialog" aria-modal="true" aria-labelledby="behaviorStudioTitle" aria-hidden="true" aria-busy="false" data-sprite-protected>
+    <header class="behavior-studio-head">
+      <div class="behavior-studio-title">
+        <span class="behavior-studio-mark" aria-hidden="true">✦</span>
+        <div>
+          <h2 id="behaviorStudioTitle">Studio de Comportamentos</h2>
+          <p>Sprites, falas, macros e gatilhos — sem editar JSON.</p>
+        </div>
+      </div>
+      <button id="closeBehaviorStudio" class="icon-button" type="button" aria-label="Fechar Studio">×</button>
+    </header>
+
+    <nav class="behavior-tabs" role="tablist" aria-label="Seções do Studio">
+      <button id="behaviorTabBehaviors" class="behavior-tab" type="button" role="tab" tabindex="0" aria-selected="true" aria-controls="behaviorPanelBehaviors" data-behavior-tab="behaviors">Comportamentos</button>
+      <button id="behaviorTabSpeech" class="behavior-tab" type="button" role="tab" tabindex="-1" aria-selected="false" aria-controls="behaviorPanelSpeech" data-behavior-tab="speech">Falas</button>
+      <button id="behaviorTabMacros" class="behavior-tab" type="button" role="tab" tabindex="-1" aria-selected="false" aria-controls="behaviorPanelMacros" data-behavior-tab="macros">Macros</button>
+      <button id="behaviorTabSimulator" class="behavior-tab" type="button" role="tab" tabindex="-1" aria-selected="false" aria-controls="behaviorPanelSimulator" data-behavior-tab="simulator">Simulador</button>
+      <button id="behaviorTabDefaults" class="behavior-tab" type="button" role="tab" tabindex="-1" aria-selected="false" aria-controls="behaviorPanelDefaults" data-behavior-tab="defaults">Configuração padrão</button>
+      <button id="behaviorTabHistory" class="behavior-tab" type="button" role="tab" tabindex="-1" aria-selected="false" aria-controls="behaviorPanelHistory" data-behavior-tab="history">Histórico</button>
+    </nav>
+
+    <div class="behavior-studio-body">
+      <section id="behaviorPanelBehaviors" class="behavior-panel" role="tabpanel" aria-labelledby="behaviorTabBehaviors" data-behavior-panel="behaviors"></section>
+      <section id="behaviorPanelSpeech" class="behavior-panel" role="tabpanel" aria-labelledby="behaviorTabSpeech" data-behavior-panel="speech" hidden></section>
+      <section id="behaviorPanelMacros" class="behavior-panel" role="tabpanel" aria-labelledby="behaviorTabMacros" data-behavior-panel="macros" hidden></section>
+      <section id="behaviorPanelSimulator" class="behavior-panel" role="tabpanel" aria-labelledby="behaviorTabSimulator" data-behavior-panel="simulator" hidden></section>
+      <section id="behaviorPanelDefaults" class="behavior-panel" role="tabpanel" aria-labelledby="behaviorTabDefaults" data-behavior-panel="defaults" hidden></section>
+      <section id="behaviorPanelHistory" class="behavior-panel" role="tabpanel" aria-labelledby="behaviorTabHistory" data-behavior-panel="history" hidden></section>
+    </div>
+
+    <footer class="behavior-studio-footer">
+      <div id="behaviorStudioStatus" class="behavior-status-line" role="status">Carregando configuração…</div>
+      <div class="behavior-footer-actions">
+        <button class="button" type="button" data-studio-action="reload">Recarregar</button>
+        <button class="button" type="button" data-studio-action="export" title="Exporta a configuração oficial salva">Exportar oficial</button>
+        <button class="button" type="button" data-studio-action="import">Importar</button>
+        <button class="button" type="button" data-studio-action="restore">Restaurar padrão</button>
+        <button class="button primary" type="button" data-studio-action="save">Salvar configuração</button>
+      </div>
+    </footer>
+    <input id="behaviorImportInput" type="file" accept="application/json,.json" hidden />
+  </section>
+
+  <dialog id="behaviorConfirmDialog" class="behavior-confirm">
+    <form method="dialog" class="behavior-confirm-content">
+      <h3 id="behaviorConfirmTitle">Confirmar ação</h3>
+      <p id="behaviorConfirmMessage"></p>
+      <div class="behavior-confirm-actions">
+        <button class="button" value="cancel">Cancelar</button>
+        <button id="behaviorConfirmAccept" class="button danger" value="confirm">Confirmar</button>
+      </div>
+    </form>
+  </dialog>
 
   <style id="customCss"></style>
   <script type="module" src="./app.js"></script>

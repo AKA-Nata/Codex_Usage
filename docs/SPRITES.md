@@ -91,7 +91,16 @@ composição por `all` e `any`. Também podem observar faixas de horário que cr
 a meia-noite, mudança de valor, clique em card ou sprite, fim de arraste,
 inatividade/retorno, erro ou recuperação da coleta, reset próximo e intervalo
 casual. A ação de cada gatilho define prioridade, cooldown, estado, destino,
-frase e se a reação deve permanecer enquanto a condição existir.
+frase e se a reação deve permanecer enquanto a condição existir. O contrato
+2.0 também permite nome amigável, personagem automático ou específico, falas
+por personagem, fallback, prevenção de repetição e repetição configurável
+enquanto a condição permanece ativa.
+
+O Studio Visual edita esse contrato sem expor o JSON ao usuário. A configuração
+só é aplicada ao motor após validação pelo backend, backup e escrita atômica;
+o hot reload conserva a última versão válida. O simulador usa avaliação pura e
+`playTemporary`, portanto não substitui o contexto real nem consome o cooldown
+do gatilho oficial.
 
 Se o arquivo não existir ou violar o schema, a interface continua operando. O
 motor conserva a última configuração válida; na primeira carga, usa um conjunto

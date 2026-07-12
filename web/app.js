@@ -1,4 +1,5 @@
 import { SpriteReactionEngine, loadSpriteBehaviorConfig } from "./sprite-reaction-engine.js";
+import { createBehaviorStudio } from "./behavior-studio.js";
 
 const STORAGE_KEY = "codex-pulse-design-v2";
 const DESIGN_SCHEMA_VERSION = 3;
@@ -42,6 +43,8 @@ const state = {
   telemetryError: "",
   design: loadDesign(),
   spriteEngine: null,
+  behaviorConfig: null,
+  behaviorStudio: null,
 };
 
 function byId(id) { return document.getElementById(id); }
@@ -113,6 +116,9 @@ function formatIdle(seconds) {
 
 function applyDesign() {
   const d = state.design;
+  const behaviorDefaults = state.behaviorConfig?.defaultBehavior || {};
+  const behaviorFeatures = behaviorDefaults.features || {};
+  const effectiveSpriteEnabled = Boolean(d.spriteEnabled) && behaviorDefaults.enabled !== false;
   const root = document.documentElement.style;
   root.setProperty("--accent", validColor(d.accent, defaults.accent));
   root.setProperty("--accent-2", validColor(d.accent2, defaults.accent2));
@@ -134,18 +140,18 @@ function applyDesign() {
   document.body.classList.toggle("has-video", Boolean(d.videoUrl));
 
   state.spriteEngine?.configure({
-    enabled: Boolean(d.spriteEnabled),
+    enabled: effectiveSpriteEnabled,
     sprite: d.sprite,
     count: Number(d.spriteCount),
     scale: Number(d.spriteScale),
     speed: Number(d.spriteSpeed),
     talkInterval: Number(d.spriteTalkInterval),
     roam: Boolean(d.spriteRoam),
-    reactions: Boolean(d.spriteSmart),
-    speech: Boolean(d.spriteSpeech),
-    movement: Boolean(d.spriteMovement),
+    reactions: Boolean(d.spriteSmart) && behaviorFeatures.reactions !== false,
+    speech: Boolean(d.spriteSpeech) && behaviorFeatures.speech !== false,
+    movement: Boolean(d.spriteMovement) && behaviorFeatures.movement !== false,
   });
-  byId("companionBadge").textContent = d.spriteEnabled
+  byId("companionBadge").textContent = effectiveSpriteEnabled
     ? `${Number(d.spriteCount) || 1} companheiro${Number(d.spriteCount) === 1 ? "" : "s"} ativo${Number(d.spriteCount) === 1 ? "" : "s"}`
     : "Companheiros desativados";
   syncControls();
@@ -276,6 +282,20 @@ function ingestSpriteContext() {
   state.spriteEngine?.ingest(currentSpriteContext());
 }
 
+async function recordSpriteReaction(entry) {
+  try {
+    await fetch("/api/studio/history", {
+      method: "POST",
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(entry),
+    });
+  } catch {
+    // Histórico é diagnóstico auxiliar e nunca interrompe o motor visual.
+  }
+}
+
 function handleStatusError(error) {
   state.statusError = error?.message || String(error || "Falha desconhecida");
   byId("statusBadge").textContent = "Painel offline";
@@ -401,15 +421,34 @@ function bindEvents() {
 
 async function bootstrap() {
   const behaviorReport = await loadSpriteBehaviorConfig("./config/sprite-behaviors.json");
+  state.behaviorConfig = behaviorReport.config;
   state.spriteEngine = new SpriteReactionEngine({
     root: byId("spriteWorld"),
     getContext: currentSpriteContext,
     onHumanInteraction: registerHumanInteraction,
+    onReaction: recordSpriteReaction,
     behaviorConfig: behaviorReport.config,
     configReport: behaviorReport,
   });
   bindEvents();
   applyDesign();
+  state.behaviorStudio = await createBehaviorStudio({
+    root: byId("behaviorStudio"),
+    backdrop: byId("behaviorStudioBackdrop"),
+    openButton: byId("openBehaviorStudio"),
+    closeButton: byId("closeBehaviorStudio"),
+    importInput: byId("behaviorImportInput"),
+    confirmDialog: byId("behaviorConfirmDialog"),
+    getEngine: () => state.spriteEngine,
+    getRealContext: currentSpriteContext,
+    onOpenAppearance: () => setStudio(true),
+    onSavedConfig: async (config, report) => {
+      state.behaviorConfig = config;
+      state.spriteEngine?.setBehaviors(config, { valid: true, source: "studio", usingFallback: false, issues: report.errors || [] });
+      applyDesign();
+      ingestSpriteContext();
+    },
+  });
   byId("companionBadge").title = behaviorReport.valid && !behaviorReport.usingFallback
     ? "Comportamentos declarativos ativos"
     : `Configuração principal indisponível; fallback seguro ativo. ${behaviorReport.issues?.[0]?.message || ""}`.trim();

@@ -15,6 +15,8 @@ if ($script:LastPythonExitCode -ne 0) {
 if (Get-Command node -ErrorAction SilentlyContinue) {
     $JavaScriptFiles = @(
         "web/app.js",
+        "web/behavior-studio-model.js",
+        "web/behavior-studio.js",
         "web/sprite-engine.js",
         "web/sprite-reaction-engine.js"
     )

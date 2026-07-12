@@ -1,6 +1,29 @@
 
 # Changelog
 
+## 4.2.0
+
+- Adicionado Studio Visual de Comportamentos em seis abas para editar,
+  duplicar, ativar, testar e excluir gatilhos e falas sem alterar JSON
+  manualmente.
+- Editor de condições cobre métricas, eventos, horário exato, faixas horárias,
+  `AND`/`OR`, personagem, animação, prioridade, cooldown, duração,
+  persistência e repetição enquanto ativa.
+- Dicionário de macros mostra origem, tipo, unidade, fallback, valor real e
+  disponibilidade, com inserção direta nas falas e validação antecipada.
+- Simulador isolado permite montar cenários completos e reproduzir uma reação
+  temporária no painel sem substituir os dados reais.
+- Backend local passou a validar o arquivo oficial contra o JSON Schema, usar
+  revisão otimista, backup e gravação atômica, além de importar, exportar e
+  restaurar a referência padrão.
+- Histórico sanitizado em `runtime/behavior-studio` registra gatilho, valores,
+  personagem, card, frase, tempos e resultado, sem dados de sessão.
+- Contrato declarativo ampliado para nome amigável, personagem específico,
+  falas por personagem, fallback, prevenção de repetição e repetição
+  configurável.
+- Cobertura ampliada para 35 testes Python, 37 casos JavaScript e 23
+  verificações E2E no Microsoft Edge, preservando o modo sem VENV e sem npm.
+
 ## 4.1.1
 
 - Corrigida a validação de `casualSpeech`, `features`, `coordination` e `motion`,

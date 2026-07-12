@@ -13,6 +13,13 @@ isolado. O resultado válido é gravado atomicamente em `data/codex-usage.json`.
 loopback. O servidor também agrega telemetria leve por meio de
 `codex_usage/telemetry.py`.
 
+`codex_usage/behavior_studio.py` é a autoridade de persistência do Studio. O
+módulo lê o schema oficial sem resolver referências externas, valida seu
+subconjunto Draft 2020-12, aplica verificações semânticas, controla revisão e
+lock, cria backups e grava o JSON oficial atomicamente. O histórico e os backups
+ficam em `runtime/behavior-studio`; a referência padrão restaurável é versionada
+em `web/config/sprite-behaviors.default.json`.
+
 A interface foi reduzida ao conteúdo operacional: quatro cards ambientais
 (`hora`, `interação`, `clima` e `máquina`) e dois cards de consumo (`Codex 5h`
 e `Codex semanal`). A saúde da coleta e a última atualização ficam no
@@ -37,6 +44,12 @@ nova do Codex.
 snapshots brutos ao motor. `web/sprite-reaction-engine.js` centraliza toda a
 lógica dos companheiros pixel art; `web/sprite-engine.js` é apenas um reexport
 de compatibilidade.
+
+`web/behavior-studio.js` controla o overlay de seis abas;
+`web/behavior-studio-model.js` concentra CRUD, composição de condições,
+validação de fala e simulação como funções puras testáveis. O simulador avalia
+uma cópia do contexto e só chama `playTemporary` quando o usuário escolhe
+reproduzir a reação no painel.
 
 As regras editáveis estão em `web/config/sprite-behaviors.json`. O arquivo
 `web/config/sprite-behaviors.schema.json` descreve seu contrato e permite
@@ -81,6 +94,8 @@ Edge Analytics -> CDP monitor -> uso/health JSON -> /api/status -> app.js
 Máquina/clima -> telemetry.py -> /api/telemetry -> app.js
 sprite-behaviors.json + schema -> validação/compilação -> motor
 Snapshots do app.js -> normalização/macros/gatilhos -> fila -> estado/movimento/fala
+Studio -> API local -> validação/revisão/backup -> sprite-behaviors.json
+Motor -> callback sanitizado -> /api/studio/history -> runtime/behavior-studio
 ```
 
 ## Persistência
@@ -88,6 +103,10 @@ Snapshots do app.js -> normalização/macros/gatilhos -> fila -> estado/moviment
 - Uso e saúde: arquivos JSON locais.
 - Personalização dos sprites e tema: `localStorage` do navegador.
 - Clima: cache em memória do processo do dashboard.
+- Configuração oficial de reações: `web/config/sprite-behaviors.json`, com
+  referência restaurável em `web/config/sprite-behaviors.default.json` e
+  backups sob `runtime/behavior-studio`.
+- Histórico de reações: JSONL sanitizado sob `runtime/behavior-studio`.
 
 ## Runtime e isolamento
 
@@ -95,3 +114,7 @@ O servidor, a coleta, os testes e os runners do Edge usam somente o Python já
 instalado e selecionado pelos scripts. Nenhum fluxo cria VENV, executa `pip` ou
 exporta cookies, perfil do Edge ou credenciais. Dashboard e CDP permanecem
 limitados a loopback por padrão.
+
+O dashboard pressupõe uma única instância local por checkout. A revisão SHA-256
+e o lock do serviço coordenam abas e requisições concorrentes dentro dessa
+instância; dois processos não devem apontar para a mesma pasta de configuração.

@@ -15,7 +15,7 @@ A bateria deve validar:
 - escrita atômica de JSON;
 - contrato de telemetria;
 - mapeamento de condições meteorológicas;
-- sintaxe JavaScript de `app.js`, `sprite-engine.js` e
+- sintaxe JavaScript de `app.js`, módulos do Studio, `sprite-engine.js` e
   `sprite-reaction-engine.js` quando Node.js estiver disponível;
 - configuração declarativa, macros, operadores, horários, eventos, thresholds,
   prioridade, cooldown, inatividade e seleção de personagens do motor de
@@ -25,12 +25,13 @@ A bateria automatizada desta versão deve produzir:
 
 | Camada | Cobertura | Resultado esperado |
 | --- | --- | ---: |
-| Python | parser, armazenamento, CDP, telemetria, GPU e sanidade de capacidade | 15 testes |
-| JavaScript | configuração e motor, no Node.js ou Edge | 28 casos |
-| Dashboard no Edge | responsividade, zonas seguras e interação | 15 verificações |
+| Python | coleta, telemetria, schema, persistência, histórico e endpoints | 35 testes |
+| JavaScript | motor, CRUD, macros e simulador, no Node.js ou Edge | 37 casos |
+| Dashboard no Edge | Studio, responsividade, zonas seguras e interação | 23 verificações |
 
-Nesta correção, os 15 testes Python e os 28 casos JavaScript foram executados com sucesso.
-O smoke E2E do Edge continua obrigatório no Windows antes do fechamento visual da entrega.
+Nesta versão, os 35 testes Python, os 37 casos JavaScript e as 23 verificações
+E2E foram executados com sucesso no Windows; os casos JavaScript e o smoke
+visual usaram o Microsoft Edge real com perfis temporários isolados.
 
 Todos os comandos usam o Python instalado na máquina. A validação não cria
 VENV, não executa `pip` e não depende de instalação npm.
@@ -40,6 +41,8 @@ isoladamente:
 
 ```powershell
 node --check web/app.js
+node --check web/behavior-studio-model.js
+node --check web/behavior-studio.js
 node --check web/sprite-engine.js
 node --check web/sprite-reaction-engine.js
 node --test tests/js/sprite-reaction-engine.node.test.mjs
@@ -77,9 +80,12 @@ Os casos compartilhados entre Node.js e Edge cobrem:
   retorno do usuário;
 - dados inválidos e valores nulos;
 - seleção com um, dois e três sprites sem repetir o último personagem.
+- CRUD imutável de gatilhos e falas, duplicação, ativação e exclusão;
+- falas por personagem, fallback e prevenção de repetição;
+- composição visual de `AND`/`OR` e repetição enquanto ativa;
+- simulador isolado, prioridade e ausência de mutação dos dados reais.
 
-A suíte compartilhada contém 28 casos JavaScript. Eles foram validados no Node.js;
-o runner Edge deve ser executado no Windows para confirmar o navegador real. Uma
+A suíte compartilhada contém 37 casos JavaScript e foi validada no Edge. Uma
 configuração intencionalmente inválida também confirma que o motor conserva a
 última versão válida ou usa o fallback legado seguro na primeira carga.
 
@@ -96,7 +102,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 
 O script não usa Node.js, não cria VENV e remove com validação de caminho o
 perfil e os logs temporários. Ele percorre os viewports `1440x900`, `760x900` e
-`390x844`, totalizando 15 verificações e validando:
+`390x844`, totalizando 23 verificações e validando:
 
 - quantidades de um, dois e três sprites dentro do viewport;
 - sprites sempre acima dos cards e estacionados em zonas seguras sem
@@ -107,6 +113,10 @@ perfil e os logs temporários. Ele percorre os viewports `1440x900`, `760x900` e
 - resize, movimento livre e arraste por ponteiro quando houver destino seguro;
 - `prefers-reduced-motion` com mundo visível, sprites estáticos e animações CSS
   desativadas.
+- abertura das seis abas do Studio sem substituir os cards;
+- CRUD visual, condições, macros clicáveis e preview de falas;
+- simulador isolado com prioridade e ação temporária disponível;
+- histórico com busca/limpeza e layout responsivo do Studio.
 
 ## Smoke manual recomendado
 

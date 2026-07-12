@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { spriteReactionEngineCases } from "./sprite-reaction-engine.cases.js";
+import { behaviorStudioModelCases } from "./behavior-studio-model.cases.js";
 
 const assertions = {
   equal: (actual, expected, message) => assert.equal(actual, expected, message),
@@ -9,6 +10,6 @@ const assertions = {
   ok: (value, message) => assert.ok(value, message),
 };
 
-for (const testCase of spriteReactionEngineCases) {
+for (const testCase of [...spriteReactionEngineCases, ...behaviorStudioModelCases]) {
   test(testCase.name, () => testCase.run(assertions));
 }

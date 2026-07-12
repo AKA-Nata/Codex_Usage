@@ -1,4 +1,4 @@
-# Codex Usage Monitor 4.1.1 — Python da máquina
+# Codex Usage Monitor 4.2.0 — Python da máquina
 
 Painel local para acompanhar os limites de uso de 5 horas e semanal do Codex,
 com companheiros pixel art que circulam pela interface e reagem aos dados reais
@@ -71,6 +71,26 @@ inatividade, retorno, erro, recuperação e atualização desatualizada. Se o JS
 não puder ser carregado ou validado, o motor mantém a configuração válida
 anterior; sem uma anterior, usa o conjunto legado seguro e informa o fallback
 no diagnóstico do painel.
+
+## Studio Visual de Comportamentos
+
+O botão `✦` abre um overlay separado, mantendo o dashboard focado nos seis
+cards. O Studio organiza a edição em:
+
+- **Comportamentos**: CRUD, ativação, busca, filtros, prioridade e editor visual
+  de condições `AND`/`OR`;
+- **Falas**: biblioteca reutilizável, macros clicáveis, validação e preview com
+  os valores locais atuais;
+- **Macros**: origem, tipo, unidade, fallback, valor e disponibilidade;
+- **Simulador**: cenário isolado de máquina, clima, limites, resets, horário,
+  inatividade e coleta, com reprodução temporária no painel;
+- **Configuração padrão**: parâmetros globais de movimento, fala e coordenação;
+- **Histórico**: diagnóstico sanitizado das reações executadas.
+
+O salvamento ocorre somente pelo backend local. Antes de substituir
+`web/config/sprite-behaviors.json`, o servidor valida o documento contra o
+schema, confere macros e referências, verifica a revisão, cria backup e usa
+gravação atômica. Importação, exportação e restauração usam o mesmo gate.
 
 As macros de GPU são preenchidas automaticamente em máquinas NVIDIA com
 `nvidia-smi` disponível. Em outros equipamentos, permanecem com o fallback
@@ -179,6 +199,16 @@ Para desativar, altere `enabled` para `false`.
 - `GET /api/health`: saúde da última coleta.
 - `GET /api/telemetry`: relógio, máquina e temperatura.
 - `POST /api/refresh`: executa coleta CDP sob demanda.
+- `GET /api/studio/config`: configuração oficial, revisão e diagnóstico.
+- `POST /api/studio/config/validate`: valida um rascunho sem persistir.
+- `PUT /api/studio/config`: salva configuração válida com backup.
+- `GET /api/studio/schema`: schema oficial.
+- `GET /api/studio/config/export`: exporta o JSON oficial.
+- `POST /api/studio/config/import`: importa e salva após validação.
+- `POST /api/studio/config/restore-default`: restaura a referência padrão.
+- `GET /api/studio/macros`: catálogo atual sanitizado.
+- `GET`, `POST` e `DELETE /api/studio/history`: consulta, registro e limpeza do
+  histórico local.
 
 ## Scripts
 
@@ -197,6 +227,12 @@ Para desativar, altere `enabled` para `false`.
 Nunca compartilhe ou versione `runtime/`, pois o perfil isolado pode conter a
 sessão do navegador. A porta CDP deve permanecer limitada a `127.0.0.1`. O
 painel permanece em loopback por padrão.
+
+Backups e histórico do Studio ficam sob `runtime/behavior-studio/`, fora de
+`web/` e do Git. A referência restaurável é o arquivo versionado
+`web/config/sprite-behaviors.default.json`. Os endpoints aceitam apenas
+Host/Origin de loopback, corpos JSON limitados e campos sanitizados; não leem
+nem retornam cookies, tokens ou o perfil do Edge.
 
 Não compacte a raiz do projeto com `Compress-Archive`, pois isso pode incluir
 `.git`, cookies, histórico e dados operacionais. Após o commit, gere a entrega

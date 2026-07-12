@@ -16,6 +16,9 @@
   <pre id="result">Executando...</pre>
   <script type="module">
     import { spriteReactionEngineCases } from "./sprite-reaction-engine.cases.js";
+    import { behaviorStudioModelCases } from "./behavior-studio-model.cases.js";
+
+    const testCases = [...spriteReactionEngineCases, ...behaviorStudioModelCases];
 
     const output = document.querySelector("#result");
     const lines = [];
@@ -37,7 +40,7 @@
     };
 
     let failures = 0;
-    for (const testCase of spriteReactionEngineCases) {
+    for (const testCase of testCases) {
       try {
         await testCase.run(assertions);
         lines.push(`PASS ${testCase.name}`);
@@ -48,9 +51,9 @@
     }
 
     document.body.dataset.result = failures ? "failed" : "passed";
-    document.body.dataset.total = String(spriteReactionEngineCases.length);
+    document.body.dataset.total = String(testCases.length);
     document.body.dataset.failures = String(failures);
-    output.textContent = `${spriteReactionEngineCases.length - failures}/${spriteReactionEngineCases.length} testes passaram\n\n${lines.join("\n")}`;
+    output.textContent = `${testCases.length - failures}/${testCases.length} testes passaram\n\n${lines.join("\n")}`;
   </script>
 </body>
 </html>

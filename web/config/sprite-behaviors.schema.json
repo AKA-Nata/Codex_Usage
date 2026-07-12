@@ -36,7 +36,8 @@
       "items": {
         "$ref": "#/$defs/phraseGroup"
       },
-      "minItems": 1
+      "minItems": 1,
+      "maxItems": 250
     },
     "triggers": {
       "type": "array",
@@ -44,7 +45,8 @@
       "items": {
         "$ref": "#/$defs/trigger"
       },
-      "minItems": 1
+      "minItems": 1,
+      "maxItems": 500
     }
   },
   "additionalProperties": false,
@@ -260,6 +262,7 @@
             "$ref": "#/$defs/cardKey"
           },
           "minItems": 1,
+          "maxItems": 50,
           "uniqueItems": true
         },
         "casualSpeech": {
@@ -423,6 +426,7 @@
             "$ref": "#/$defs/shortPhrase"
           },
           "minItems": 1,
+          "maxItems": 50,
           "uniqueItems": true
         },
         "weight": {
@@ -455,11 +459,27 @@
           "required": [
             "phraseRefs"
           ]
+        },
+        {
+          "required": [
+            "characterPhrases"
+          ]
+        },
+        {
+          "required": [
+            "fallbackPhrase"
+          ]
         }
       ],
       "properties": {
         "id": {
           "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "Nome amigavel exibido no Studio."
         },
         "enabled": {
           "type": "boolean"
@@ -473,12 +493,21 @@
         "spriteState": {
           "$ref": "#/$defs/spriteState"
         },
+        "character": {
+          "$ref": "#/$defs/characterSelection",
+          "default": "auto",
+          "description": "Personagem preferido ou selecao automatica."
+        },
+        "topic": {
+          "$ref": "#/$defs/identifier"
+        },
         "phrases": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/shortPhrase"
           },
           "minItems": 1,
+          "maxItems": 50,
           "uniqueItems": true
         },
         "phraseRefs": {
@@ -487,7 +516,19 @@
             "$ref": "#/$defs/identifier"
           },
           "minItems": 1,
+          "maxItems": 50,
           "uniqueItems": true
+        },
+        "characterPhrases": {
+          "$ref": "#/$defs/characterPhraseMap"
+        },
+        "fallbackPhrase": {
+          "$ref": "#/$defs/shortPhrase"
+        },
+        "preventRepeat": {
+          "type": "boolean",
+          "default": true,
+          "description": "Evita repetir a mesma fala dentro da janela de coordenacao."
         },
         "priority": {
           "type": "integer",
@@ -507,6 +548,11 @@
           "type": "boolean",
           "default": false
         },
+        "repeatWhileActive": {
+          "type": "boolean",
+          "default": true,
+          "description": "Permite nova execucao apos o cooldown enquanto a condicao continuar ativa."
+        },
         "holdSeconds": {
           "type": "number",
           "minimum": 0,
@@ -515,6 +561,34 @@
         }
       },
       "additionalProperties": false
+    },
+    "characterPhraseMap": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "explorer": {
+          "$ref": "#/$defs/phraseList"
+        },
+        "wizard": {
+          "$ref": "#/$defs/phraseList"
+        },
+        "mechanic": {
+          "$ref": "#/$defs/phraseList"
+        },
+        "orb": {
+          "$ref": "#/$defs/phraseList"
+        }
+      },
+      "additionalProperties": false
+    },
+    "phraseList": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/shortPhrase"
+      },
+      "minItems": 1,
+      "maxItems": 50,
+      "uniqueItems": true
     },
     "condition": {
       "oneOf": [
@@ -605,7 +679,8 @@
           "items": {
             "$ref": "#/$defs/condition"
           },
-          "minItems": 1
+          "minItems": 1,
+          "maxItems": 20
         }
       },
       "additionalProperties": false
@@ -621,7 +696,8 @@
           "items": {
             "$ref": "#/$defs/condition"
           },
-          "minItems": 1
+          "minItems": 1,
+          "maxItems": 20
         }
       },
       "additionalProperties": false
@@ -827,6 +903,16 @@
         "wake",
         "confused",
         "celebrate"
+      ]
+    },
+    "characterSelection": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "explorer",
+        "wizard",
+        "mechanic",
+        "orb"
       ]
     },
     "identifier": {

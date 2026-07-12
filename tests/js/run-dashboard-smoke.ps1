@@ -605,6 +605,155 @@ function Test-Drag {
     Add-Check "arraste por ponteiro"
 }
 
+function Test-BehaviorStudio {
+    Set-Viewport 1440 900
+    Wait-CdpCondition "document.getElementById('behaviorStudioStatus').textContent !== 'Carregando configuração…'" 10000
+    $null = Invoke-CdpExpression "document.getElementById('openBehaviorStudio').click(); true"
+    Wait-CdpCondition "document.getElementById('behaviorStudio').classList.contains('open')"
+    Wait-UiSettled
+
+    $Structure = Invoke-CdpExpression @'
+(() => ({
+  tabs: document.querySelectorAll("[data-behavior-tab]").length,
+  visiblePanel: document.querySelectorAll("[data-behavior-panel]:not([hidden])").length,
+  rules: document.querySelectorAll(".behavior-rule-card").length,
+  cardsBehind: document.querySelectorAll(".ambient-card, .usage-card").length,
+  dialogRole: document.getElementById("behaviorStudio").getAttribute("role"),
+  status: document.getElementById("behaviorStudioStatus").textContent,
+}))()
+'@
+    Assert-Condition ($Structure.tabs -eq 6) "Studio não exibiu as seis abas obrigatórias."
+    Assert-Condition ($Structure.visiblePanel -eq 1) "Studio exibiu mais de um painel de aba."
+    Assert-Condition ($Structure.rules -gt 0) "Lista de comportamentos ficou vazia. Status: $($Structure.status)"
+    Assert-Condition ($Structure.cardsBehind -eq 6) "Dashboard principal foi alterado ao abrir o Studio."
+    Assert-Condition ($Structure.dialogRole -eq "dialog") "Studio não expôs semântica de diálogo."
+    Add-Check "Studio abre sobre dashboard preservado com seis abas"
+
+    $Crud = Invoke-CdpExpression @'
+(() => {
+  const before = document.querySelectorAll(".behavior-rule-card").length;
+  document.querySelector('[data-action="new-trigger"]').click();
+  const form = document.querySelector('[data-studio-form="trigger"]');
+  const id = form?.querySelector('[name="id"]')?.value;
+  form?.querySelector('[data-action="add-condition"]')?.click();
+  return {
+    before,
+    after: document.querySelectorAll(".behavior-rule-card").length,
+    id,
+    conditions: form?.querySelectorAll("[data-condition-row]").length || 0,
+    hasCharacter: Boolean(form?.querySelector('[name="character"]')),
+    hasRepeat: Boolean(form?.querySelector('[name="repeatWhileActive"]')),
+  };
+})()
+'@
+    Assert-Condition ($Crud.after -eq ($Crud.before + 1)) "Criação visual de gatilho não atualizou a lista."
+    Assert-Condition ([bool] $Crud.id) "Novo gatilho não recebeu ID."
+    Assert-Condition ($Crud.conditions -eq 2) "Editor visual não adicionou condição AND/OR."
+    Assert-Condition ([bool] $Crud.hasCharacter -and [bool] $Crud.hasRepeat) "Campos de personagem/repetição ausentes."
+    Add-Check "CRUD visual e editor de condições"
+
+    $null = Invoke-CdpExpression "document.querySelector('[data-behavior-tab=speech]').click(); true"
+    Wait-CdpCondition "!document.getElementById('behaviorPanelSpeech').hidden && document.querySelector('[data-studio-form=phrase]')"
+    $Speech = Invoke-CdpExpression @'
+(() => {
+  const field = document.querySelector('[data-studio-form="phrase"] [data-speech-input]');
+  field.focus();
+  field.setSelectionRange(field.value.length, field.value.length);
+  const macroButton = document.querySelector('[data-studio-form="phrase"] [data-action="insert-macro"]');
+  const token = macroButton?.dataset.token;
+  macroButton?.click();
+  return {
+    inserted: Boolean(token && field.value.includes(token)),
+    preview: document.querySelector("[data-speech-preview]")?.textContent || "",
+    validation: document.querySelector("[data-speech-errors]")?.textContent || "",
+  };
+})()
+'@
+    Assert-Condition ([bool] $Speech.inserted) "Clique em macro não a inseriu na fala."
+    Assert-Condition ([bool] $Speech.preview) "Pré-visualização de fala ficou vazia."
+    Assert-Condition ([bool] $Speech.validation) "Validação de macros não apresentou diagnóstico."
+    Add-Check "falas, macro clicável e pré-visualização real"
+
+    $null = Invoke-CdpExpression "document.querySelector('[data-behavior-tab=macros]').click(); true"
+    Wait-CdpCondition "!document.getElementById('behaviorPanelMacros').hidden && document.querySelectorAll('.macro-card').length >= 16"
+    $MacroColumns = Invoke-CdpExpression "Boolean(document.querySelector('.macro-card .macro-token') && document.querySelector('.macro-card .macro-value') && document.querySelector('.macro-card .behavior-chip'))"
+    Assert-Condition ([bool] $MacroColumns) "Dicionário de macros não exibiu token, valor e disponibilidade."
+    Add-Check "dicionário de macros com disponibilidade"
+
+    $null = Invoke-CdpExpression "document.querySelector('[data-behavior-tab=simulator]').click(); true"
+    Wait-CdpCondition "!document.getElementById('behaviorPanelSimulator').hidden && document.querySelector('[data-studio-form=simulator]')"
+    $null = Invoke-CdpExpression @'
+(() => {
+  const form = document.querySelector('[data-studio-form="simulator"]');
+  form.querySelector('[name="testTriggerId"]').value = "all";
+  form.querySelector('[name="cpu"]').value = "99";
+  form.querySelector('[name="ram"]').value = "97";
+  form.querySelector('[name="disk"]').value = "96";
+  form.requestSubmit();
+  return true;
+})()
+'@
+    Wait-CdpCondition "document.querySelectorAll('.behavior-result-card').length > 0"
+    $Simulation = Invoke-CdpExpression @'
+(() => ({
+  results: document.querySelectorAll(".behavior-result-card").length,
+  priorities: [...document.querySelectorAll(".behavior-result-card .behavior-chip")].some(item => /^P\d+/.test(item.textContent)),
+  play: Boolean(document.querySelector('[data-action="play-simulation"]')),
+  realCardsUnchanged: document.getElementById("machineValue").textContent !== "CPU 99% · RAM 97%",
+}))()
+'@
+    Assert-Condition ($Simulation.results -gt 0) "Simulador não ativou gatilhos no cenário crítico."
+    Assert-Condition ([bool] $Simulation.priorities -and [bool] $Simulation.play) "Resultado não exibiu prioridade/ação no painel."
+    Assert-Condition ([bool] $Simulation.realCardsUnchanged) "Simulador alterou dados reais do dashboard."
+    Add-Check "simulador isolado com reação executável"
+
+    $null = Invoke-CdpExpression "document.querySelector('[data-action=play-simulation]').click(); true"
+    Wait-CdpCondition "!document.getElementById('behaviorStudio').classList.contains('open')"
+    $Playback = Invoke-CdpExpression @'
+(() => ({
+  status: document.getElementById("behaviorStudioStatus")?.textContent || "",
+  activeSprite: [...document.querySelectorAll(".sprite-companion")].some(item => item.dataset.state !== "idle"),
+}))()
+'@
+    Assert-Condition ($Playback.status.Contains("tempor") -and $Playback.status.Contains("executada")) "Executar no painel não confirmou a reação temporária: $($Playback.status)"
+    Assert-Condition ([bool] $Playback.activeSprite) "Executar no painel não alterou temporariamente o estado de um sprite."
+    Add-Check "Executar no painel reproduz e fecha o Studio"
+
+    $null = Invoke-CdpExpression "document.getElementById('openBehaviorStudio').click(); true"
+    Wait-CdpCondition "document.getElementById('behaviorStudio').classList.contains('open')"
+    $null = Invoke-CdpExpression "document.querySelector('[data-behavior-tab=history]').click(); true"
+    Wait-CdpCondition "!document.getElementById('behaviorPanelHistory').hidden && document.querySelector('.behavior-table')"
+    $HistoryControls = Invoke-CdpExpression "Boolean(document.querySelector('[data-control=history-search]') && document.querySelector('[data-action=clear-history]'))"
+    Assert-Condition ([bool] $HistoryControls) "Histórico não exibiu busca e limpeza."
+    Add-Check "histórico com busca e limpeza"
+
+    Set-Viewport 390 844
+    Wait-UiSettled
+    $Responsive = Invoke-CdpExpression @'
+(() => {
+  const rect = document.getElementById("behaviorStudio").getBoundingClientRect();
+  const overflowing = [...document.querySelectorAll("#behaviorStudio *")]
+    .map(element => ({ element: element.tagName + "." + element.className, rect: element.getBoundingClientRect() }))
+    .filter(item => item.rect.right > innerWidth + 1 || item.rect.left < -1)
+    .slice(0, 8)
+    .map(item => ({ element: item.element, left: item.rect.left, right: item.rect.right, width: item.rect.width }));
+  return {
+    ok: rect.left >= -0.5 && rect.right <= innerWidth + 0.5 && getComputedStyle(document.body).overflowX === "hidden",
+    viewport: innerWidth,
+    documentWidth: document.documentElement.scrollWidth,
+    studio: { left: rect.left, right: rect.right, width: rect.width },
+    overflowing,
+  };
+})()
+'@
+    Assert-Condition ([bool] $Responsive.ok) "Studio provocou overflow horizontal no viewport móvel: $($Responsive | ConvertTo-Json -Depth 5 -Compress)"
+    Add-Check "Studio responsivo no Edge"
+
+    $null = Invoke-CdpExpression "document.getElementById('closeBehaviorStudio').click(); true"
+    Wait-CdpCondition "!document.getElementById('behaviorStudio').classList.contains('open')"
+    Wait-CdpCondition "document.querySelectorAll('.sprite-companion.talking').length === 0" 12000
+}
+
 function Remove-SafeTemporaryPath([string] $Path, [bool] $Recursive = $false) {
     if (-not $Path -or -not (Test-Path -LiteralPath $Path)) { return }
     $Resolved = [IO.Path]::GetFullPath($Path)
@@ -703,6 +852,7 @@ try {
     }
     Wait-CdpCondition "document.getElementById('spriteWorld').dataset.reducedMotion === 'false'"
 
+    Test-BehaviorStudio
     Test-GeometryMatrix
     Test-ReducedMotion
     Test-Drag

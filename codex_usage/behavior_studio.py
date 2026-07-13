@@ -24,6 +24,7 @@ MACRO_PATTERN = re.compile(r"{{\s*([a-z][a-z0-9_]*)\s*}}")
 SENSITIVE_HISTORY_PATTERN = re.compile(
     r"(?i)(cookie|authorization|bearer|token|session|profile|secret|password|credential|api[_-]?key|websocket[_-]?debugger[_-]?url)"
 )
+CHARACTER_ID_PATTERN = re.compile(r"^[a-z][a-z0-9_-]{1,63}$")
 
 
 class StudioError(ValueError):
@@ -38,6 +39,39 @@ class StudioValidationError(StudioError):
 
 class StudioRevisionConflict(StudioError):
     pass
+
+
+def migrate_behavior_config(config: Any) -> tuple[Any, list[dict[str, Any]]]:
+    """Return a migrated copy of 4.2/4.3 behavior data and an audit trail."""
+
+    migrated = deepcopy(config)
+    changes: list[dict[str, Any]] = []
+    if not isinstance(migrated, dict):
+        return migrated, changes
+    metadata = migrated.get("metadata")
+    if isinstance(metadata, dict) and str(metadata.get("schemaVersion") or "").startswith("2."):
+        previous = metadata.get("schemaVersion")
+        metadata["schemaVersion"] = "3.0.0"
+        changes.append({"path": "$.metadata.schemaVersion", "before": previous, "after": "3.0.0"})
+        if str(metadata.get("version") or "").startswith("2."):
+            previous = metadata.get("version")
+            metadata["version"] = "3.0.0"
+            changes.append({"path": "$.metadata.version", "before": previous, "after": "3.0.0"})
+    triggers = migrated.get("triggers")
+    if isinstance(triggers, list):
+        for index, trigger in enumerate(triggers):
+            if not isinstance(trigger, dict) or "character" not in trigger:
+                continue
+            legacy = trigger.get("character")
+            if legacy == "auto":
+                selector = {"kind": "auto", "value": None}
+            elif isinstance(legacy, str) and CHARACTER_ID_PATTERN.fullmatch(legacy):
+                selector = {"kind": "id", "value": legacy}
+            else:
+                continue
+            trigger["character"] = selector
+            changes.append({"path": f"$.triggers[{index}].character", "before": legacy, "after": selector})
+    return migrated, changes
 
 
 def _json_equal(left: Any, right: Any) -> bool:
@@ -522,8 +556,12 @@ class BehaviorStudioService:
     def read_config(self) -> dict[str, Any]:
         with self.lock:
             config = _read_json(self.config_path)
+            config, migrations = migrate_behavior_config(config)
             report = self.validate(config)
-            return {"config": config, "revision": _revision(config), **report}
+            if report["valid"] and migrations:
+                self._backup(_read_json(self.config_path), "automatic-migration")
+                atomic_write_json(self.config_path, config)
+            return {"config": config, "revision": _revision(config), "migrations": migrations, **report}
 
     def read_schema(self) -> dict[str, Any]:
         return deepcopy(self.schema)
@@ -543,7 +581,8 @@ class BehaviorStudioService:
     def save_config(self, config: Any, *, expected_revision: str | None = None, reason: str = "save") -> dict[str, Any]:
         if not isinstance(config, dict):
             raise StudioValidationError([{"path": "$", "keyword": "type", "message": "A configuracao deve ser um objeto JSON."}])
-        report = self.validate(config)
+        candidate, migrations = migrate_behavior_config(config)
+        report = self.validate(candidate)
         if not report["valid"]:
             raise StudioValidationError(report["errors"])
         with self.lock:
@@ -552,13 +591,14 @@ class BehaviorStudioService:
             if expected_revision and expected_revision != current_revision:
                 raise StudioRevisionConflict("A configuracao mudou desde a ultima leitura. Recarregue o Studio antes de salvar.")
             backup_name = self._backup(current, reason)
-            atomic_write_json(self.config_path, deepcopy(config))
+            atomic_write_json(self.config_path, deepcopy(candidate))
             return {
-                "config": deepcopy(config),
-                "revision": _revision(config),
+                "config": deepcopy(candidate),
+                "revision": _revision(candidate),
                 "valid": True,
                 "errors": [],
                 "backup": backup_name,
+                "migrations": migrations,
             }
 
     def restore_default(self, *, expected_revision: str | None = None) -> dict[str, Any]:

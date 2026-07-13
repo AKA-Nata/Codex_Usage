@@ -30,6 +30,9 @@
     "defaultBehavior": {
       "$ref": "#/$defs/defaultBehavior"
     },
+    "characterGroups": {
+      "$ref": "#/$defs/characterGroups"
+    },
     "phrases": {
       "type": "array",
       "description": "Biblioteca de falas reutilizáveis pelo comportamento casual.",
@@ -565,21 +568,12 @@
     "characterPhraseMap": {
       "type": "object",
       "minProperties": 1,
-      "properties": {
-        "explorer": {
-          "$ref": "#/$defs/phraseList"
-        },
-        "wizard": {
-          "$ref": "#/$defs/phraseList"
-        },
-        "mechanic": {
-          "$ref": "#/$defs/phraseList"
-        },
-        "orb": {
-          "$ref": "#/$defs/phraseList"
-        }
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_-]{1,63}$"
       },
-      "additionalProperties": false
+      "additionalProperties": {
+        "$ref": "#/$defs/phraseList"
+      }
     },
     "phraseList": {
       "type": "array",
@@ -906,14 +900,48 @@
       ]
     },
     "characterSelection": {
-      "type": "string",
-      "enum": [
-        "auto",
-        "explorer",
-        "wizard",
-        "mechanic",
-        "orb"
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^(?:auto|[a-z][a-z0-9_-]{1,63})$",
+          "description": "Formato legado 4.x, migrado automaticamente ao importar."
+        },
+        {
+          "type": "object",
+          "required": ["kind", "value"],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": ["auto", "id", "group", "tag", "personality", "capability"]
+            },
+            "value": {
+              "type": ["string", "null"],
+              "maxLength": 80
+            }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "kind": { "const": "auto" } }, "required": ["kind"] },
+              "then": { "properties": { "value": { "type": "null" } } }
+            },
+            {
+              "if": { "properties": { "kind": { "enum": ["id", "group", "tag", "personality", "capability"] } }, "required": ["kind"] },
+              "then": { "properties": { "value": { "type": "string", "minLength": 1, "pattern": "^[a-z][a-z0-9_-]{1,79}$" } } }
+            }
+          ],
+          "additionalProperties": false
+        }
       ]
+    },
+    "characterGroups": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_-]{1,63}$" },
+      "additionalProperties": {
+        "type": "array",
+        "items": { "$ref": "#/$defs/characterSelection" },
+        "minItems": 1,
+        "maxItems": 50
+      }
     },
     "identifier": {
       "type": "string",

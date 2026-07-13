@@ -20,6 +20,45 @@ function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 }
 
+export function normalizePackageCharacterManifest(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  if (raw.frame && Object.values(raw.states || {}).every(state => typeof state?.asset === "string" && state?.frames)) return clone(raw);
+  const firstState = Object.values(raw.states || {})[0] || {};
+  const firstFrame = firstState.frame || {};
+  const fallbackState = typeof raw.fallback === "string" ? raw.fallback : raw.fallback?.state || "idle";
+  return {
+    schemaVersion: raw.schemaVersion || "1.0.0",
+    id: raw.id,
+    name: raw.name,
+    version: raw.version,
+    frame: {
+      width: Number(firstFrame.width) || 256,
+      height: Number(firstFrame.height) || 256,
+      layout: "horizontal",
+    },
+    fps: Number(firstState.fps) || 6,
+    loop: firstState.loop !== false,
+    baseline: Number(raw.visualIdentity?.baseline ?? 0.9),
+    anchor: clone(raw.visualIdentity?.anchor || { x: 0.5, y: 0.88 }),
+    orientation: raw.visualIdentity?.orientation || "right",
+    fallback: fallbackState,
+    visualIdentity: clone(raw.visualIdentity || { id: raw.id, name: raw.name }),
+    personality: clone(raw.personality || null),
+    tags: clone(raw.tags || []),
+    capabilities: clone(raw.capabilities || []),
+    groups: clone(raw.groups || []),
+    states: Object.fromEntries(Object.entries(raw.states || {}).map(([state, spec]) => {
+      const asset = raw.assets?.[spec.asset];
+      return [state, {
+        asset: asset?.route || asset?.path || asset?.file || spec.asset,
+        frames: Number(spec.frame?.count || spec.frames) || 1,
+        fps: Number(spec.fps) || Number(firstState.fps) || 6,
+        loop: spec.loop !== false,
+      }];
+    })),
+  };
+}
+
 function issue(path, code, message) {
   return { path, code, message };
 }
@@ -126,7 +165,10 @@ export class CharacterRegistry {
       const raw = await this.loadManifest(definition);
       const report = validateCharacterManifest(raw, { expectedId: id, requireAllStates: definition.source === "native" });
       if (!report.valid) throw new Error(report.errors[0].message);
-      const manifestBaseUrl = definition.baseUrl || new URL(".", new URL(definition.manifestUrl, globalThis.document?.baseURI || globalThis.location?.href || "http://localhost/")).toString();
+      const documentBase = globalThis.document?.baseURI || globalThis.location?.href || "http://localhost/";
+      const manifestBaseUrl = definition.baseUrl
+        ? new URL(definition.baseUrl, documentBase).toString()
+        : new URL(".", new URL(definition.manifestUrl, documentBase)).toString();
       const record = { ...definition, name: raw.name, manifest: report.manifest, manifestBaseUrl, valid: true, issues: [] };
       this.records.set(id, record);
       return record;
@@ -155,21 +197,34 @@ export class CharacterRegistry {
 
   registerCatalog(payload = {}) {
     this.catalogRevision = payload.revision || this.catalogRevision;
+    const incomingIds = new Set((payload.characters || []).map(item => item?.id).filter(Boolean));
+    [...this.definitions.entries()].forEach(([id, definition]) => {
+      if (definition.source === "installed" && !incomingIds.has(id)) {
+        this.definitions.delete(id);
+        this.records.delete(id);
+      }
+    });
     (payload.characters || []).forEach((item, index) => {
       if (!ID_PATTERN.test(item.id || "") || !item.manifest) return;
-      const report = validateCharacterManifest(item.manifest, { expectedId: item.id, requireAllStates: false });
+      const normalizedManifest = normalizePackageCharacterManifest(item.manifest);
+      const report = validateCharacterManifest(normalizedManifest, { expectedId: item.id, requireAllStates: false });
       if (!report.valid) return;
+      const previous = this.definitions.get(item.id) || {};
       this.definitions.set(item.id, {
         id: item.id,
         name: item.name || item.manifest.name,
         manifest: report.manifest,
         manifestUrl: item.manifestUrl || `${this.catalogUrl}/${item.id}/manifest`,
-        baseUrl: item.baseUrl || item.manifestUrl,
-        legacyUrl: item.legacyUrl || null,
+        baseUrl: item.baseUrl || item.assetBaseUrl || item.manifestUrl,
+        legacyUrl: item.legacyUrl || previous.legacyUrl || null,
         source: item.source || "installed",
+        native: item.native === true || item.source === "native",
+        author: item.author || item.manifest.author || null,
+        compatibility: item.compatibility || item.manifest.compatibility || null,
+        versions: item.versions || [],
         enabled: item.enabled !== false,
         compatible: item.compatible !== false,
-        displayOrder: item.displayOrder ?? (NATIVE_CHARACTER_IDS.length + index),
+        displayOrder: item.displayOrder ?? previous.displayOrder ?? (NATIVE_CHARACTER_IDS.length + index),
         activeVersion: item.activeVersion || item.manifest.version,
         diagnostics: item.diagnostics || [],
       });
@@ -195,6 +250,11 @@ export class CharacterRegistry {
           personality: manifest?.personality || null,
           tags: manifest?.tags || [],
           capabilities: manifest?.capabilities || [],
+          groups: manifest?.groups || [],
+          author: item.author || manifest?.author || null,
+          compatibility: item.compatibility || null,
+          native: item.native === true || item.source === "native",
+          versions: item.versions || [],
           valid: record ? record.valid : null,
           issues: record?.issues || item.diagnostics || [],
         };
@@ -256,7 +316,10 @@ export class CharacterRegistry {
   }
 
   async resolveLegacy(characterId, requestedState, reason) {
-    const definition = this.definitions.get(characterId) || this.definitions.get("explorer") || NATIVE_CHARACTER_DEFINITIONS[0];
+    const requested = this.definitions.get(characterId);
+    const definition = (requested?.legacyUrl ? requested : null)
+      || this.definitions.get("explorer")
+      || NATIVE_CHARACTER_DEFINITIONS[0];
     const assetUrl = new URL(definition.legacyUrl, globalThis.document?.baseURI || globalThis.location?.href || "http://localhost/").toString();
     let image = null;
     try { image = await this.loadAsset(assetUrl); } catch {}

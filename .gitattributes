@@ -9,3 +9,5 @@
 *.ico binary
 *.webp binary
 *.mp4 binary
+*.zip binary
+*.codex-character.zip binary

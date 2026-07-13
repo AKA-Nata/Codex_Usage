@@ -4,10 +4,12 @@ import {
   resolveSpriteMacroValues,
   validateSpriteBehaviorConfig,
 } from "./sprite-reaction-engine.js";
+import { normalizeCharacterSelector } from "./character-selector.js";
 
 
 export const STUDIO_CARDS = Object.freeze(["hora", "interacao", "temperatura", "maquina", "codex_5h", "codex_semanal", "status"]);
 export const STUDIO_CHARACTERS = Object.freeze(["auto", "explorer", "wizard", "mechanic", "orb"]);
+export const STUDIO_CHARACTER_SELECTOR_KINDS = Object.freeze(["auto", "id", "group", "tag", "personality", "capability"]);
 export const STUDIO_STATES = Object.freeze(["idle", "walk", "inspect", "point", "talk", "happy", "worried", "critical", "hot", "cold", "sleep", "wake", "confused", "celebrate"]);
 export const STUDIO_OPERATORS = Object.freeze([">", ">=", "<", "<=", "==", "between"]);
 export const STUDIO_EVENTS = Object.freeze(["user_return", "collection_error", "collection_stale", "collection_recovery", "value_change", "click", "drag", "random_interval"]);
@@ -74,7 +76,7 @@ export function createStudioTrigger(config, values = {}) {
     enabled: values.enabled !== false,
     when: values.when || { metric: "cpu", operator: ">", value: 75 },
     targetCard: values.targetCard || "maquina",
-    character: values.character || "auto",
+    character: normalizeCharacterSelector(values.character),
     spriteState: values.spriteState || "inspect",
     phrases: values.phrases?.length ? [...values.phrases] : ["CPU em {{cpu}}%."],
     fallbackPhrase: values.fallbackPhrase || "Tenho uma atualização para você.",

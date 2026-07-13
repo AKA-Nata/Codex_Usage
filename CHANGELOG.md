@@ -1,6 +1,26 @@
 
 # Changelog
 
+## 5.0.0
+
+- Adicionada a aba Personagens ao Studio, com biblioteca, preview real,
+  metadados, diagnóstico e ciclo de vida completo de pacotes.
+- Criado o formato público `.codex-character.zip`, sem scripts, com manifesto,
+  assets PNG, falas, comportamentos, preview, licença e SHA-256.
+- O backend agora valida e instala pacotes atomicamente, controla versões,
+  ativação, update, rollback, exportação, remoção em uso e restauração nativa.
+- Seletores de gatilho passaram a aceitar ID, grupo, tag, personalidade e
+  capacidade, com migração automática dos formatos 4.2/4.3.
+- Identidade visual foi separada de cinco perfis versionados de personalidade.
+- Incluídos quatro pacotes nativos reproduzíveis e o pacote oficial Sentinela.
+- Configurações efetivas compõem fragmentos de pacotes por namespace sem
+  regravar `sprite-behaviors.json`.
+- Registry protegido por `ETag`/`If-Match`, IDs nativos reservados, restauração
+  transacional não destrutiva no startup e instalação separada de atualização.
+- Validação de pacotes agora recusa APNG e comportamentos incompatíveis antes
+  da instalação, verifica integridade ao servir assets e expõe diagnóstico da
+  composição efetiva em endpoint dedicado.
+
 ## 4.3.0
 
 - Substituídas as simulações de estado em CSS por 60 sprite sheets PNG reais

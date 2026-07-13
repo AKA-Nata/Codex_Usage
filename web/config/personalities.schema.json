@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.codex/schemas/personalities.schema.json",
+  "title": "Perfil de personalidade de personagem",
+  "type": "object",
+  "required": ["schemaVersion", "id", "name", "version", "description", "style", "fallbackPhrases"],
+  "properties": {
+    "$schema": { "const": "../personalities.schema.json" },
+    "schemaVersion": { "const": "1.0.0" },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{1,63}$" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "description": { "type": "string", "minLength": 1, "maxLength": 240 },
+    "style": {
+      "type": "object",
+      "required": ["tone", "verbosity", "humor", "proactivity"],
+      "properties": {
+        "tone": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "verbosity": { "type": "string", "enum": ["silent", "short", "balanced"] },
+        "humor": { "type": "string", "enum": ["none", "light", "frequent"] },
+        "proactivity": { "type": "string", "enum": ["low", "medium", "high"] }
+      },
+      "additionalProperties": false
+    },
+    "fallbackPhrases": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 160 },
+      "minItems": 1,
+      "maxItems": 20,
+      "uniqueItems": true
+    }
+  },
+  "additionalProperties": false
+}

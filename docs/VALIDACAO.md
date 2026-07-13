@@ -25,11 +25,11 @@ A bateria automatizada desta versão deve produzir:
 
 | Camada | Cobertura | Resultado esperado |
 | --- | --- | ---: |
-| Python | coleta, telemetria, manifests, sheets, persistência, histórico e endpoints | 37 testes |
-| JavaScript | reação, registry, animação, Studio, macros e simulador | 43 casos |
-| Dashboard no Edge | Studio, animações, responsividade, zonas seguras e interação | 25 verificações |
+| Python | coleta, telemetria, pacotes, migração, persistência, histórico e endpoints | 57 testes |
+| JavaScript | reação, registry, animação, seletores, Studio, macros e simulador | 53 casos |
+| Dashboard no Edge | sete abas, pacote real, animações, três viewports e interação | 29 verificações |
 
-Nesta versão, os 37 testes Python, os 43 casos JavaScript e as 25 verificações
+Nesta versão, os 57 testes Python, os 53 casos JavaScript e as 29 verificações
 E2E foram executados com sucesso no Windows; os casos JavaScript e o smoke
 visual usaram o Microsoft Edge real com perfis temporários isolados.
 
@@ -85,7 +85,7 @@ Os casos compartilhados entre Node.js e Edge cobrem:
 - composição visual de `AND`/`OR` e repetição enquanto ativa;
 - simulador isolado, prioridade e ausência de mutação dos dados reais.
 
-A suíte compartilhada contém 43 casos JavaScript e foi validada no Edge. Uma
+A suíte compartilhada contém 53 casos JavaScript e foi validada no Edge. Uma
 configuração intencionalmente inválida também confirma que o motor conserva a
 última versão válida ou usa o fallback legado seguro na primeira carga.
 
@@ -102,7 +102,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 
 O script não usa Node.js, não cria VENV e remove com validação de caminho o
 perfil e os logs temporários. Ele percorre os viewports `1440x900`, `760x900` e
-`390x844`, totalizando 25 verificações e validando:
+`390x844`, totalizando 29 verificações e validando:
 
 - quantidades de um, dois e três sprites dentro do viewport;
 - sprites sempre acima dos cards e estacionados em zonas seguras sem
@@ -113,7 +113,9 @@ perfil e os logs temporários. Ele percorre os viewports `1440x900`, `760x900` e
 - resize, movimento livre e arraste por ponteiro quando houver destino seguro;
 - `prefers-reduced-motion` com mundo visível, sprites estáticos e animações CSS
   desativadas.
-- abertura das seis abas do Studio sem substituir os cards;
+- abertura das sete abas do Studio sem substituir os cards;
+- biblioteca de personagens com o pacote Sentinela realmente instalado em um
+  registry temporário, preview, diagnóstico e controles de pacote;
 - CRUD visual, condições, macros clicáveis e preview de falas;
 - simulador isolado com prioridade e ação temporária disponível;
 - histórico com busca/limpeza e layout responsivo do Studio.

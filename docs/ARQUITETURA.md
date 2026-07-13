@@ -45,7 +45,7 @@ snapshots brutos ao motor. `web/sprite-reaction-engine.js` centraliza toda a
 lógica dos companheiros pixel art; `web/sprite-engine.js` é apenas um reexport
 de compatibilidade.
 
-`web/behavior-studio.js` controla o overlay de seis abas;
+`web/behavior-studio.js` controla o overlay de sete abas;
 `web/behavior-studio-model.js` concentra CRUD, composição de condições,
 validação de fala e simulação como funções puras testáveis. O simulador avalia
 uma cópia do contexto e só chama `playTemporary` quando o usuário escolhe
@@ -56,6 +56,14 @@ fallback dos personagens. `web/sprite-animation-engine.js` mantém um único loo
 de frames para painel e previews. O reaction engine continua responsável por
 condições, fila, movimento e despacho, delegando somente a renderização do
 estado. `web/behavior-studio-animation-preview.js` isola a prévia do Studio.
+
+`codex_usage/character_packages.py` é a autoridade do registry 5.0: valida ZIPs
+inertes, instala em staging, mantém versões e controla ativação, rollback,
+exportação, remoção em uso e restauração dos nativos.
+`codex_usage/character_behaviors.py` compõe em memória as falas e regras de
+pacotes ativos por namespace. No navegador, `web/character-selector.js` resolve
+ID, grupo, tag, personalidade e capacidade; a aba
+`web/behavior-studio-characters-tab.js` gerencia a biblioteca.
 
 As regras editáveis estão em `web/config/sprite-behaviors.json`. O arquivo
 `web/config/sprite-behaviors.schema.json` descreve seu contrato e permite
@@ -102,6 +110,8 @@ sprite-behaviors.json + schema -> validação/compilação -> motor
 Snapshots do app.js -> normalização/macros/gatilhos -> fila -> estado/movimento/fala
 Studio -> API local -> validação/revisão/backup -> sprite-behaviors.json
 Motor -> callback sanitizado -> /api/studio/history -> runtime/behavior-studio
+Pacote ZIP -> validação/staging -> runtime/character-packages -> catálogo/assets
+Config oficial + pacotes ativos -> /api/behaviors/v1/effective -> motor
 ```
 
 ## Persistência
@@ -113,6 +123,8 @@ Motor -> callback sanitizado -> /api/studio/history -> runtime/behavior-studio
   referência restaurável em `web/config/sprite-behaviors.default.json` e
   backups sob `runtime/behavior-studio`.
 - Histórico de reações: JSONL sanitizado sob `runtime/behavior-studio`.
+- Registry de pacotes, arquivos extraídos e versões: `runtime/character-packages`.
+- Pacotes nativos restauráveis: `web/assets/character-packages`.
 
 ## Runtime e isolamento
 

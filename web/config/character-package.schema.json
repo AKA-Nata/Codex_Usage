@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.codex/schemas/character-package.schema.json",
+  "title": "Manifesto de pacote Codex Character",
+  "type": "object",
+  "required": ["schemaVersion", "id", "name", "author", "version", "compatibility", "visualIdentity", "personality", "tags", "capabilities", "assets", "states", "fallback", "license", "checksums"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{1,63}$" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "author": {
+      "oneOf": [
+        { "type": "string", "minLength": 1, "maxLength": 160 },
+        { "type": "object", "required": ["name"], "properties": { "name": { "type": "string", "minLength": 1, "maxLength": 160 } }, "additionalProperties": true }
+      ]
+    },
+    "version": { "$ref": "#/$defs/semver" },
+    "compatibility": { "type": ["object", "string"] },
+    "visualIdentity": {
+      "type": "object",
+      "required": ["name", "baseline", "anchor", "orientation"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "baseline": { "type": "number", "minimum": 0, "maximum": 1 },
+        "anchor": {
+          "type": "object",
+          "required": ["x", "y"],
+          "properties": { "x": { "type": "number", "minimum": 0, "maximum": 1 }, "y": { "type": "number", "minimum": 0, "maximum": 1 } },
+          "additionalProperties": false
+        },
+        "orientation": { "enum": ["left", "right"] }
+      },
+      "additionalProperties": false
+    },
+    "personality": {
+      "oneOf": [
+        { "type": "string", "minLength": 1, "maxLength": 64 },
+        { "type": "object", "required": ["id"], "properties": { "id": { "type": "string", "minLength": 1, "maxLength": 64 } }, "additionalProperties": true }
+      ]
+    },
+    "tags": { "$ref": "#/$defs/stringList" },
+    "capabilities": { "$ref": "#/$defs/stringList" },
+    "assets": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["file", "mediaType"],
+        "properties": {
+          "file": { "type": "string", "pattern": "^assets/[A-Za-z0-9._/-]+\\.png$" },
+          "mediaType": { "const": "image/png" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "states": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["asset", "frame", "fps", "loop", "fallback"],
+        "properties": {
+          "asset": { "type": "string", "minLength": 1 },
+          "frame": {
+            "type": "object",
+            "required": ["width", "height", "count", "columns"],
+            "properties": {
+              "width": { "type": "integer", "minimum": 1, "maximum": 2048 },
+              "height": { "type": "integer", "minimum": 1, "maximum": 2048 },
+              "count": { "type": "integer", "minimum": 1, "maximum": 128 },
+              "columns": { "type": "integer", "minimum": 1, "maximum": 128 }
+            },
+            "additionalProperties": false
+          },
+          "fps": { "type": "number", "minimum": 1, "maximum": 60 },
+          "loop": { "type": "boolean" },
+          "fallback": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "fallback": { "type": "object", "required": ["state"], "properties": { "state": { "type": "string", "minLength": 1 } }, "additionalProperties": false },
+    "license": { "type": ["object", "string"] },
+    "checksums": {
+      "type": "object",
+      "required": ["algorithm", "files"],
+      "properties": {
+        "algorithm": { "const": "sha256" },
+        "files": { "type": "object", "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "semver": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$" },
+    "stringList": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 64 }, "maxItems": 64, "uniqueItems": true }
+  }
+}

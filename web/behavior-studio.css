@@ -71,6 +71,12 @@ body.behavior-studio-open { overflow: hidden; }
   text-align: left;
 }
 .behavior-rule-card.active, .behavior-phrase-card.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+[data-characters-component] .behavior-phrase-card { position: relative; cursor: pointer; }
+[data-characters-component] .behavior-phrase-card .behavior-chip { margin-top: 7px; margin-right: 4px; }
+[data-characters-component] .animation-preview-stage { min-height: 220px; }
+[data-character-detail] .behavior-field strong { overflow-wrap: anywhere; color: var(--text); font-size: 12px; }
+[data-character-diagnostics] ul { margin: 0; padding-left: 18px; }
+[data-character-file-name] { flex: 2 1 220px; overflow-wrap: anywhere; }
 .behavior-rule-main { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .behavior-rule-main button { min-width: 0; padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; }
 .behavior-rule-card b, .behavior-phrase-card b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }

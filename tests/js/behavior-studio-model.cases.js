@@ -372,7 +372,7 @@ export const behaviorStudioModelCases = [
 
       const simulation = runStudioSimulation(config, { cpu: 81 }, { now: NOW, random: () => 0 });
       const event = simulation.events[0];
-      assert.equal(event.character, "wizard");
+      assert.deepEqual(event.character, { kind: "id", value: "wizard" });
       assert.equal(event.characterMessages.wizard, "Magia de CPU: 81%.");
       assert.equal(event.characterMessages.explorer, "Explorando CPU: 81%.");
       assert.equal(event.fallbackMessage, "Fallback de CPU: 81%.");

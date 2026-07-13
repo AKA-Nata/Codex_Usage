@@ -195,6 +195,7 @@
     </header>
 
     <nav class="behavior-tabs" role="tablist" aria-label="Seções do Studio">
+      <button id="behaviorTabCharacters" class="behavior-tab" type="button" role="tab" tabindex="-1" aria-selected="false" aria-controls="behaviorPanelCharacters" data-behavior-tab="characters">Personagens</button>
       <button id="behaviorTabBehaviors" class="behavior-tab" type="button" role="tab" tabindex="0" aria-selected="true" aria-controls="behaviorPanelBehaviors" data-behavior-tab="behaviors">Comportamentos</button>
       <button id="behaviorTabSpeech" class="behavior-tab" type="button" role="tab" tabindex="-1" aria-selected="false" aria-controls="behaviorPanelSpeech" data-behavior-tab="speech">Falas</button>
       <button id="behaviorTabMacros" class="behavior-tab" type="button" role="tab" tabindex="-1" aria-selected="false" aria-controls="behaviorPanelMacros" data-behavior-tab="macros">Macros</button>
@@ -204,6 +205,7 @@
     </nav>
 
     <div class="behavior-studio-body">
+      <section id="behaviorPanelCharacters" class="behavior-panel" role="tabpanel" aria-labelledby="behaviorTabCharacters" data-behavior-panel="characters" hidden></section>
       <section id="behaviorPanelBehaviors" class="behavior-panel" role="tabpanel" aria-labelledby="behaviorTabBehaviors" data-behavior-panel="behaviors"></section>
       <section id="behaviorPanelSpeech" class="behavior-panel" role="tabpanel" aria-labelledby="behaviorTabSpeech" data-behavior-panel="speech" hidden></section>
       <section id="behaviorPanelMacros" class="behavior-panel" role="tabpanel" aria-labelledby="behaviorTabMacros" data-behavior-panel="macros" hidden></section>

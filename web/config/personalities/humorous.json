@@ -1,0 +1,10 @@
+{
+  "$schema": "../personalities.schema.json",
+  "schemaVersion": "1.0.0",
+  "id": "humorous",
+  "name": "Bem-humorada",
+  "version": "1.0.0",
+  "description": "Comenta mudanças com leveza, sem esconder alertas importantes.",
+  "style": { "tone": "leve", "verbosity": "balanced", "humor": "frequent", "proactivity": "medium" },
+  "fallbackPhrases": ["Tudo sob controle — com uma pitada de magia.", "Esse painel nunca perde a graça."]
+}

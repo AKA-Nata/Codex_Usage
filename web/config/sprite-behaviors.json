@@ -2,8 +2,8 @@
   "$schema": "./sprite-behaviors.schema.json",
   "metadata": {
     "id": "codex-dashboard-sprite-behaviors",
-    "version": "2.0.0",
-    "schemaVersion": "2.0.0",
+    "version": "3.0.0",
+    "schemaVersion": "3.0.0",
     "locale": "pt-BR",
     "description": "Comportamentos declarativos dos sprites do painel Codex."
   },
@@ -179,6 +179,20 @@
     "codex_5h": "#card-five-hour",
     "codex_semanal": "#card-weekly",
     "status": "#statusBadge"
+  },
+  "characterGroups": {
+    "natives": [
+      { "kind": "id", "value": "explorer" },
+      { "kind": "id", "value": "wizard" },
+      { "kind": "id", "value": "mechanic" },
+      { "kind": "id", "value": "orb" }
+    ],
+    "speakers": [
+      { "kind": "capability", "value": "speech" }
+    ],
+    "diagnostics": [
+      { "kind": "capability", "value": "diagnostics" }
+    ]
   },
   "defaultBehavior": {
     "enabled": true,

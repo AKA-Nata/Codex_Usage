@@ -1,4 +1,4 @@
-# Codex Usage Monitor 4.3.0 — Python da máquina
+# Codex Usage Monitor 5.0.0 — Python da máquina
 
 Painel local para acompanhar os limites de uso de 5 horas e semanal do Codex,
 com companheiros pixel art que circulam pela interface e reagem aos dados reais
@@ -40,10 +40,9 @@ No estúdio visual é possível escolher personagem principal, quantidade,
 tamanho, velocidade e intervalo de fala. Falas, deslocamento, movimento livre e
 reações contextuais podem ser ativados ou desativados separadamente.
 
-Esta entrega não adiciona novos assets bitmap. Os estados `idle`, `walk`,
-`inspect`, `point`, `talk`, `happy`, `worried`, `critical`, `hot`, `cold`,
-`sleep`, `wake`, `confused` e `celebrate` reutilizam os personagens atuais com
-animações e efeitos CSS em passos, preservando o pixel art.
+Os estados `idle`, `walk`, `inspect`, `point`, `talk`, `happy`, `worried`,
+`critical`, `hot`, `cold`, `sleep`, `wake`, `confused` e `celebrate` usam
+sprite sheets PNG reais, com FPS, loop, espelhamento e fallback declarados.
 
 ## Comportamentos declarativos
 
@@ -77,6 +76,8 @@ no diagnóstico do painel.
 O botão `✦` abre um overlay separado, mantendo o dashboard focado nos seis
 cards. O Studio organiza a edição em:
 
+- **Personagens**: biblioteca, preview animado, metadados, diagnóstico,
+  importação, exportação, ativação, rollback e remoção de pacotes;
 - **Comportamentos**: CRUD, ativação, busca, filtros, prioridade e editor visual
   de condições `AND`/`OR`;
 - **Falas**: biblioteca reutilizável, macros clicáveis, validação e preview com
@@ -103,7 +104,27 @@ pause e reduced motion.
 
 O editor de gatilhos mostra uma prévia animada com play/pause, ajuste temporário
 de FPS e diagnóstico de asset/fallback. Configurações e preferências 4.2 usam os
-mesmos IDs (`explorer`, `wizard`, `mechanic`, `orb`) e migram sem regravação.
+mesmos IDs (`explorer`, `wizard`, `mechanic`, `orb`) e migram automaticamente
+com backup quando a configuração oficial precisa ser atualizada.
+
+## Plataforma de personagens 5.0
+
+Personagens extensíveis são distribuídos como `.codex-character.zip`, contendo
+somente `manifest.json`, PNGs, comportamentos, falas, preview e licença. O
+backend valida SemVer, compatibilidade, checksums, MIME/assinatura PNG,
+dimensões, frames e limites contra ZIP bomb; recusa traversal, links, scripts e
+caminhos fora do registry. Instalação e atualização são atômicas, com versões
+anteriores disponíveis para rollback.
+
+Identidade visual e personalidade são contratos independentes. Os perfis
+versionados `technical`, `humorous`, `objective`, `silent` e `critical` ficam em
+`web/config/personalities/`. Gatilhos podem selecionar por ID, grupo, tag,
+personalidade ou capacidade. Seletores legados 4.2/4.3 migram automaticamente.
+
+O pacote oficial de exemplo está em
+`examples/characters/sentinel.codex-character.zip`; sua fonte demonstra o
+formato público e pode ser reconstruída de forma determinística com
+`scripts/build_character_package.py`. Consulte `docs/CHARACTER_PACKAGES.md`.
 
 As macros de GPU são preenchidas automaticamente em máquinas NVIDIA com
 `nvidia-smi` disponível. Em outros equipamentos, permanecem com o fallback
@@ -222,6 +243,21 @@ Para desativar, altere `enabled` para `false`.
 - `GET /api/studio/macros`: catálogo atual sanitizado.
 - `GET`, `POST` e `DELETE /api/studio/history`: consulta, registro e limpeza do
   histórico local.
+- `GET /api/characters/v1/catalog`: catálogo nativo e instalado.
+- `GET /api/characters/v1/assets/{id}/{version}/{path}`: asset validado do registry.
+- `GET /api/behaviors/v1/effective`: configuração oficial composta com pacotes ativos.
+- `GET /api/behaviors/v1/effective/diagnostics`: pacotes compostos, revisão e rejeições.
+- `GET /api/studio/characters/v1`: biblioteca e revisões do registry.
+- `POST /api/studio/characters/v1/validate`: valida pacote sem instalar.
+- `POST /api/studio/characters/v1/install`: instala um novo pacote validado.
+- `POST /api/studio/characters/v1/{id}/update`: instala uma versão SemVer superior.
+- `POST /api/studio/characters/v1/{id}/enable|disable|activate|rollback`: ciclo de vida.
+- `GET /api/studio/characters/v1/{id}/export`: exporta o pacote original.
+- `DELETE /api/studio/characters/v1/{id}`: remove após verificar referências.
+- `POST /api/studio/characters/v1/restore-natives`: restaura os quatro nativos.
+
+O catálogo e a biblioteca retornam `ETag`. Toda mutação de personagens exige
+o mesmo valor em `If-Match`, impedindo que uma aba antiga sobrescreva outra.
 
 ## Scripts
 
@@ -233,6 +269,8 @@ Para desativar, altere `enabled` para `false`.
 - `scripts/start_dashboard.ps1`: inicia o painel.
 - `scripts/diagnose.ps1`: diagnóstico do runtime, Edge e coleta.
 - `scripts/test.ps1`: compilação e testes.
+- `scripts/build_character_package.py`: gera pacote reproduzível.
+- `scripts/build_native_character_packages.py`: reconstrói os pacotes nativos.
 - `scripts/package_source.ps1`: gera ZIP seguro somente com arquivos versionados.
 
 ## Segurança

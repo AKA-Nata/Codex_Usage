@@ -1,7 +1,7 @@
 import {
   STUDIO_CARDS,
   STUDIO_CHANGE_FIELDS,
-  STUDIO_CHARACTERS,
+  STUDIO_CHARACTER_SELECTOR_KINDS,
   STUDIO_EVENTS,
   STUDIO_OPERATORS,
   STUDIO_STATES,
@@ -24,9 +24,12 @@ import {
 } from "./behavior-studio-model.js";
 import { normalizeSpriteData, resolveSpriteMacroValues, validateSpriteBehaviorConfig } from "./sprite-reaction-engine.js";
 import { BehaviorStudioAnimationPreview } from "./behavior-studio-animation-preview.js";
+import { normalizeCharacterSelector, resolveCharacterSelector } from "./character-selector.js";
+import { BehaviorStudioCharactersTab } from "./behavior-studio-characters-tab.js";
 
 
 const CHARACTER_LABELS = { auto: "Automático", explorer: "Explorador", wizard: "Mago", mechanic: "Mecânico", orb: "Orbital" };
+const CHARACTER_SELECTOR_LABELS = { auto: "Automático", id: "Personagem por ID", group: "Grupo", tag: "Tag", personality: "Personalidade", capability: "Capacidade" };
 const CARD_LABELS = { hora: "Hora", interacao: "Interação", temperatura: "Temperatura", maquina: "Máquina", codex_5h: "Codex 5h", codex_semanal: "Codex semanal", status: "Coleta" };
 const EVENT_LABELS = {
   user_return: "Retorno do usuário",
@@ -133,7 +136,7 @@ function conditionRowHtml(row, index, config) {
 
 
 export class BehaviorStudio {
-  constructor({ root, backdrop, openButton, closeButton, importInput, confirmDialog, getEngine, getRealContext, onSavedConfig, onOpenAppearance, characterRegistry, animationEngine } = {}) {
+  constructor({ root, backdrop, openButton, closeButton, importInput, confirmDialog, getEngine, getRealContext, onSavedConfig, onOpenAppearance, onCharacterCatalogChanged, characterRegistry, animationEngine } = {}) {
     this.root = root;
     this.backdrop = backdrop;
     this.openButton = openButton;
@@ -144,9 +147,22 @@ export class BehaviorStudio {
     this.getRealContext = getRealContext;
     this.onSavedConfig = onSavedConfig;
     this.onOpenAppearance = onOpenAppearance;
+    this.onCharacterCatalogChanged = onCharacterCatalogChanged;
     this.characterRegistry = characterRegistry;
     this.animationEngine = animationEngine;
     this.animationPreview = new BehaviorStudioAnimationPreview({ registry: characterRegistry, animationEngine });
+    const charactersRoot = root?.querySelector?.('[data-behavior-panel="characters"]');
+    this.charactersTab = charactersRoot ? new BehaviorStudioCharactersTab({
+      root: charactersRoot,
+      registry: characterRegistry,
+      animationEngine,
+      requestJson: (url, options) => this.request(url, options),
+      requestBinary: (url, options) => fetch(url, { cache: "no-store", credentials: "same-origin", ...options }),
+      confirm: (title, message) => this.confirm(title, message),
+      callbacks: {
+        onCatalogChanged: (characters, metadata) => this.onCharacterCatalogChanged?.(characters, metadata),
+      },
+    }) : null;
     this.config = null;
     this.revision = null;
     this.dirty = false;
@@ -296,6 +312,7 @@ export class BehaviorStudio {
     }
     this.root.classList.remove("open");
     this.animationPreview.destroy();
+    this.charactersTab?.destroyPreview();
     this.backdrop?.classList.remove("open");
     this.root.setAttribute("aria-hidden", "true");
     this.backdrop?.setAttribute("aria-hidden", "true");
@@ -341,6 +358,7 @@ export class BehaviorStudio {
       try { this.commitActiveForm(); }
       catch (error) { this.setStatus(error.message, "error"); return false; }
     }
+    if (this.activeTab === "characters" && tab !== "characters") this.charactersTab?.destroyPreview();
     this.activeTab = tab;
     this.root.querySelectorAll("[data-behavior-tab]").forEach(button => {
       const selected = button.dataset.behaviorTab === tab;
@@ -367,6 +385,7 @@ export class BehaviorStudio {
 
   renderActivePanel() {
     ({
+      characters: () => this.renderCharacters(),
       behaviors: () => this.renderBehaviors(),
       speech: () => this.renderSpeech(),
       macros: () => this.renderMacros(),
@@ -374,6 +393,12 @@ export class BehaviorStudio {
       defaults: () => this.renderDefaults(),
       history: () => this.renderHistory(),
     })[this.activeTab]?.();
+  }
+
+  renderCharacters() {
+    if (!this.charactersTab) return;
+    if (!this.charactersTab.initialized) this.charactersTab.init();
+    else this.charactersTab.render();
   }
 
   behaviorList() {
@@ -425,9 +450,23 @@ export class BehaviorStudio {
         <section class="behavior-editor">${selected ? this.triggerEditorHtml(selected) : '<div class="behavior-empty">Crie o primeiro comportamento.</div>'}</section>
       </div>`;
     if (selected) this.animationPreview.mount(panel.querySelector("[data-trigger-animation-preview]"), {
-      characterId: selected.character || "auto",
+      characterId: this.resolveTriggerCharacterId(selected.character),
       state: selected.spriteState || "idle",
     });
+  }
+
+  characterCatalog() {
+    const values = this.characterRegistry?.list?.() || [];
+    return values.length ? values : Object.entries(CHARACTER_LABELS)
+      .filter(([id]) => id !== "auto")
+      .map(([id, name], displayOrder) => ({ id, name, displayOrder, enabled: true, compatible: true }));
+  }
+
+  resolveTriggerCharacterId(selector) {
+    return resolveCharacterSelector(selector, this.characterCatalog(), {
+      groups: this.config?.characterGroups || {},
+      preferredIds: ["explorer", "wizard", "mechanic", "orb"],
+    }).characterId;
   }
 
   triggerEditorHtml(trigger) {
@@ -435,6 +474,13 @@ export class BehaviorStudio {
     const preservesNestedCondition = hasNestedStudioCondition(trigger.when);
     const rows = preservesNestedCondition ? [] : flattened.nodes.map(conditionRowModel);
     const characterPhrases = trigger.characterPhrases || {};
+    const characterSelector = normalizeCharacterSelector(trigger.character);
+    const characterCatalog = this.characterCatalog();
+    Object.keys(characterPhrases).forEach(characterId => {
+      if (!characterCatalog.some(character => character.id === characterId)) {
+        characterCatalog.push({ id: characterId, name: CHARACTER_LABELS[characterId] || `${characterId} (indisponível)`, enabled: false, compatible: true });
+      }
+    });
     return `
       <div class="behavior-heading"><div><h3>${escapeHtml(trigger.name || humanizeStudioId(trigger.id))}</h3><p>Edição visual da regra declarativa.</p></div><span class="behavior-chip ${trigger.enabled ? "ok" : "warn"}">${trigger.enabled ? "Ativa" : "Inativa"}</span></div>
       <form data-studio-form="trigger" data-original-id="${escapeHtml(trigger.id)}"${preservesNestedCondition ? ' data-preserve-when="true"' : ""}>
@@ -442,7 +488,8 @@ export class BehaviorStudio {
           <label class="behavior-field span-6">Nome<input name="name" maxlength="80" required value="${escapeHtml(trigger.name || humanizeStudioId(trigger.id))}" /></label>
           <label class="behavior-field span-6">ID<input name="id" pattern="[a-z][a-z0-9_]*" required value="${escapeHtml(trigger.id)}" /></label>
           <label class="behavior-field span-3">Card<select name="targetCard">${optionsHtml(STUDIO_CARDS, trigger.targetCard, CARD_LABELS)}</select></label>
-          <label class="behavior-field span-3">Personagem<select name="character">${optionsHtml(STUDIO_CHARACTERS, trigger.character || "auto", CHARACTER_LABELS)}</select></label>
+          <label class="behavior-field span-3">Seletor de personagem<select name="characterSelectorKind">${optionsHtml(STUDIO_CHARACTER_SELECTOR_KINDS, characterSelector.kind, CHARACTER_SELECTOR_LABELS)}</select></label>
+          <label class="behavior-field span-3">Valor do seletor<input name="characterSelectorValue" list="studioCharacterValues" maxlength="80" value="${escapeHtml(characterSelector.value || "")}"${characterSelector.kind === "auto" ? " disabled" : ""} placeholder="ID, grupo, tag, personalidade ou capacidade" /><datalist id="studioCharacterValues">${characterCatalog.map(character => `<option value="${escapeHtml(character.id)}">${escapeHtml(character.name || character.id)}</option>`).join("")}${Object.keys(this.config.characterGroups || {}).map(group => `<option value="${escapeHtml(group)}">Grupo</option>`).join("")}</datalist></label>
           <label class="behavior-field span-3">Estado/animação<select name="spriteState">${optionsHtml(STUDIO_STATES, trigger.spriteState)}</select></label>
           <label class="behavior-field span-3">Prioridade<input name="priority" type="number" min="0" max="1000" step="1" value="${escapeHtml(trigger.priority)}" /></label>
         </div>
@@ -475,7 +522,7 @@ export class BehaviorStudio {
             <label class="behavior-field span-8">Falas (uma por linha)<textarea name="phrases" data-speech-input>${escapeHtml((trigger.phrases || []).join("\n"))}</textarea></label>
             <label class="behavior-field span-4">Grupos reutilizáveis<select name="phraseRefs" multiple size="4">${(this.config.phrases || []).map(group => `<option value="${escapeHtml(group.id)}"${trigger.phraseRefs?.includes(group.id) ? " selected" : ""}>${escapeHtml(group.id)}</option>`).join("")}</select></label>
             <label class="behavior-field full">Fallback<textarea name="fallbackPhrase" maxlength="160" data-speech-input>${escapeHtml(trigger.fallbackPhrase || "")}</textarea></label>
-            ${["explorer", "wizard", "mechanic", "orb"].map(character => `<label class="behavior-field span-6">${escapeHtml(CHARACTER_LABELS[character])} (uma por linha)<textarea name="characterPhrases_${character}" data-speech-input>${escapeHtml((characterPhrases[character] || []).join("\n"))}</textarea></label>`).join("")}
+            ${characterCatalog.map(character => `<label class="behavior-field span-6">${escapeHtml(character.name || CHARACTER_LABELS[character.id] || character.id)} (uma por linha)<textarea name="characterPhrases_${escapeHtml(character.id)}" data-character-phrase="${escapeHtml(character.id)}" data-speech-input>${escapeHtml((characterPhrases[character.id] || []).join("\n"))}</textarea></label>`).join("")}
           </div>
           <div class="behavior-preview"><b>Macros rápidas</b><div class="behavior-inline-actions">${this.macros.slice(0, 10).map(macro => `<button class="behavior-mini-button" type="button" data-action="insert-macro" data-token="${escapeHtml(macro.token)}">${escapeHtml(macro.token)}</button>`).join("")}</div></div>
         </div>
@@ -520,7 +567,10 @@ export class BehaviorStudio {
         ? cloneStudioValue(original.when)
         : buildStudioWhen(data.get("conditionGroup"), this.serializeConditionRows(form)),
       targetCard: data.get("targetCard"),
-      character: data.get("character"),
+      character: normalizeCharacterSelector({
+        kind: data.get("characterSelectorKind"),
+        value: data.get("characterSelectorKind") === "auto" ? null : String(data.get("characterSelectorValue") || "").trim(),
+      }),
       spriteState: data.get("spriteState"),
       priority: Math.round(numberValue(data.get("priority"), 0)),
       cooldownSeconds: Math.max(0, numberValue(data.get("cooldownSeconds"), 0)),
@@ -534,8 +584,9 @@ export class BehaviorStudio {
     const phraseRefs = [...form.querySelector('[name="phraseRefs"]')?.selectedOptions || []].map(option => option.value);
     const fallbackPhrase = String(data.get("fallbackPhrase") || "").trim();
     const characterPhrases = {};
-    ["explorer", "wizard", "mechanic", "orb"].forEach(character => {
-      const texts = splitLines(data.get(`characterPhrases_${character}`));
+    [...form.querySelectorAll("[data-character-phrase]")].forEach(field => {
+      const character = field.dataset.characterPhrase;
+      const texts = splitLines(field.value);
       if (texts.length) characterPhrases[character] = texts;
     });
     if (phrases.length) trigger.phrases = phrases;
@@ -935,9 +986,12 @@ export class BehaviorStudio {
   handleChange(event) {
     if (event.target.matches(".condition-kind")) event.target.closest("[data-condition-row]").dataset.kind = event.target.value;
     if (event.target.matches('[data-condition="eventType"]')) event.target.closest("[data-condition-row]").dataset.eventType = event.target.value;
-    if (event.target.matches('[data-studio-form="trigger"] [name="character"], [data-studio-form="trigger"] [name="spriteState"]')) {
+    if (event.target.matches('[data-studio-form="trigger"] [name="characterSelectorKind"], [data-studio-form="trigger"] [name="characterSelectorValue"], [data-studio-form="trigger"] [name="spriteState"]')) {
       const form = event.target.closest('[data-studio-form="trigger"]');
-      this.animationPreview.update({ characterId: form.elements.character.value, state: form.elements.spriteState.value });
+      const kind = form.elements.characterSelectorKind.value;
+      form.elements.characterSelectorValue.disabled = kind === "auto";
+      const selector = normalizeCharacterSelector({ kind, value: kind === "auto" ? null : form.elements.characterSelectorValue.value });
+      this.animationPreview.update({ characterId: this.resolveTriggerCharacterId(selector), state: form.elements.spriteState.value });
     }
     if (event.target.matches('[data-control="rule-filter"], [data-control="rule-sort"]')) {
       try {

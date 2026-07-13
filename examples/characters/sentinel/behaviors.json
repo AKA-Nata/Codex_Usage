@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0.0",
+  "triggers": [
+    {
+      "id": "alerta_critico",
+      "name": "Sentinela em alerta crítico",
+      "enabled": true,
+      "when": {
+        "any": [
+          {
+            "metric": "cpu",
+            "operator": ">",
+            "value": 90
+          },
+          {
+            "metric": "ram",
+            "operator": ">",
+            "value": 90
+          },
+          {
+            "metric": "codex_5h_percentual",
+            "operator": "<",
+            "value": 10
+          }
+        ]
+      },
+      "targetCard": "maquina",
+      "spriteState": "critical",
+      "phraseRefs": [
+        "sentinel_critical"
+      ],
+      "priority": 125,
+      "cooldownSeconds": 90,
+      "durationSeconds": 6,
+      "persistent": false,
+      "repeatWhileActive": true,
+      "preventRepeat": true
+    }
+  ]
+}

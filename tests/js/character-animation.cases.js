@@ -118,6 +118,26 @@ export const characterAnimationCases = [
     },
   },
   {
+    name: "registry remove pacote desinstalado sem remover personagens nativos",
+    async run(assert) {
+      const registry = new CharacterRegistry({
+        definitions: [{ id: "explorer", name: "Explorador", source: "native", manifest: manifest(), manifestUrl: "http://local/explorer/character.json", legacyUrl: "http://local/explorer.png" }],
+      });
+      registry.registerCatalog({ characters: [{
+        id: "sentinel",
+        source: "installed",
+        enabled: true,
+        compatible: true,
+        manifest: manifest({ id: "sentinel", name: "Sentinela", version: "1.0.0" }),
+        baseUrl: "http://local/sentinel/1.0.0/",
+      }] });
+      assert.equal(registry.has("sentinel"), true);
+      registry.registerCatalog({ characters: [] });
+      assert.equal(registry.has("sentinel"), false);
+      assert.equal(registry.has("explorer"), true);
+    },
+  },
+  {
     name: "animation engine avança por FPS, pausa e respeita reduced motion",
     async run(assert) {
       const registry = { resolveState: async (_id, state) => resolved(state) };

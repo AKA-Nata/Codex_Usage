@@ -1,0 +1,320 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "sentinel",
+  "name": "Sentinela",
+  "author": {
+    "name": "Codex Usage Monitor"
+  },
+  "version": "1.0.0",
+  "compatibility": {
+    "dashboard": {
+      "min": "5.0.0",
+      "maxExclusive": "6.0.0"
+    },
+    "behaviorSchema": {
+      "min": "2.0.0",
+      "maxExclusive": "4.0.0"
+    }
+  },
+  "visualIdentity": {
+    "name": "Sentinela",
+    "baseline": 0.9,
+    "anchor": {
+      "x": 0.5,
+      "y": 0.88
+    },
+    "orientation": "right"
+  },
+  "personality": {
+    "id": "critical",
+    "name": "Crítico",
+    "phrases": "phrases.json",
+    "behaviors": "behaviors.json"
+  },
+  "tags": [
+    "monitoramento",
+    "alerta",
+    "oficial"
+  ],
+  "capabilities": [
+    "speech",
+    "movement",
+    "diagnostics",
+    "critical-alerts"
+  ],
+  "assets": {
+    "idle": {
+      "file": "assets/idle.png",
+      "mediaType": "image/png"
+    },
+    "walk": {
+      "file": "assets/walk.png",
+      "mediaType": "image/png"
+    },
+    "talk": {
+      "file": "assets/talk.png",
+      "mediaType": "image/png"
+    },
+    "point": {
+      "file": "assets/point.png",
+      "mediaType": "image/png"
+    },
+    "inspect": {
+      "file": "assets/inspect.png",
+      "mediaType": "image/png"
+    },
+    "happy": {
+      "file": "assets/happy.png",
+      "mediaType": "image/png"
+    },
+    "worried": {
+      "file": "assets/worried.png",
+      "mediaType": "image/png"
+    },
+    "critical": {
+      "file": "assets/critical.png",
+      "mediaType": "image/png"
+    },
+    "hot": {
+      "file": "assets/hot.png",
+      "mediaType": "image/png"
+    },
+    "cold": {
+      "file": "assets/cold.png",
+      "mediaType": "image/png"
+    },
+    "sleep": {
+      "file": "assets/sleep.png",
+      "mediaType": "image/png"
+    },
+    "wake": {
+      "file": "assets/wake.png",
+      "mediaType": "image/png"
+    },
+    "confused": {
+      "file": "assets/confused.png",
+      "mediaType": "image/png"
+    },
+    "celebrate": {
+      "file": "assets/celebrate.png",
+      "mediaType": "image/png"
+    },
+    "dragging": {
+      "file": "assets/dragging.png",
+      "mediaType": "image/png"
+    }
+  },
+  "states": {
+    "idle": {
+      "asset": "idle",
+      "frame": {
+        "width": 256,
+        "height": 256,
+        "count": 4,
+        "columns": 4
+      },
+      "fps": 4,
+      "loop": true,
+      "fallback": "idle"
+    },
+    "walk": {
+      "asset": "walk",
+      "frame": {
+        "width": 256,
+        "height": 256,
+        "count": 4,
+        "columns": 4
+      },
+      "fps": 8,
+      "loop": true,
+      "fallback": "idle"
+    },
+    "talk": {
+      "asset": "talk",
+      "frame": {
+        "width": 256,
+        "height": 256,
+        "count": 4,
+        "columns": 4
+      },
+      "fps": 6,
+      "loop": true,
+      "fallback": "idle"
+    },
+    "point": {
+      "asset": "point",
+      "frame": {
+        "width": 256,
+        "height": 256,
+        "count": 4,
+        "columns": 4
+      },
+      "fps": 6,
+      "loop": true,
+      "fallback": "idle"
+    },
+    "inspect": {
+      "asset": "inspect",
+      "frame": {
+        "width": 256,
+        "height": 256,
+        "count": 4,
+        "columns": 4
+      },
+      "fps": 5,
+      "loop": true,
+      "fallback": "idle"
+    },
+    "happy": {
+      "asset": "happy",
+      "frame": {
+        "width": 256,
+        "height": 256,
+        "count": 4,
+        "columns": 4
+      },
+      "fps": 7,
+      "loop": true,
+      "fallback": "idle"
+    },
+    "worried": {
+      "asset": "worried",
+      "frame": {
+        "width": 256,
+        "height": 256,
+        "count": 4,
+        "columns": 4
+      },
+      "fps": 6,
+      "loop": true,
+      "fallback": "idle"
+    },
+    "critical": {
+      "asset": "critical",
+      "frame": {
+        "width": 256,
+        "height": 256,
+        "count": 4,
+        "columns": 4
+      },
+      "fps": 10,
+      "loop": true,
+      "fallback": "idle"
+    },
+    "hot": {
+      "asset": "hot",
+      "frame": {
+        "width": 256,
+        "height": 256,
+        "count": 4,
+        "columns": 4
+      },
+      "fps": 7,
+      "loop": true,
+      "fallback": "idle"
+    },
+    "cold": {
+      "asset": "cold",
+      "frame": {
+        "width": 256,
+        "height": 256,
+        "count": 4,
+        "columns": 4
+      },
+      "fps": 6,
+      "loop": true,
+      "fallback": "idle"
+    },
+    "sleep": {
+      "asset": "sleep",
+      "frame": {
+        "width": 256,
+        "height": 256,
+        "count": 4,
+        "columns": 4
+      },
+      "fps": 2,
+      "loop": true,
+      "fallback": "idle"
+    },
+    "wake": {
+      "asset": "wake",
+      "frame": {
+        "width": 256,
+        "height": 256,
+        "count": 4,
+        "columns": 4
+      },
+      "fps": 8,
+      "loop": false,
+      "fallback": "idle"
+    },
+    "confused": {
+      "asset": "confused",
+      "frame": {
+        "width": 256,
+        "height": 256,
+        "count": 4,
+        "columns": 4
+      },
+      "fps": 5,
+      "loop": true,
+      "fallback": "idle"
+    },
+    "celebrate": {
+      "asset": "celebrate",
+      "frame": {
+        "width": 256,
+        "height": 256,
+        "count": 4,
+        "columns": 4
+      },
+      "fps": 8,
+      "loop": false,
+      "fallback": "idle"
+    },
+    "dragging": {
+      "asset": "dragging",
+      "frame": {
+        "width": 256,
+        "height": 256,
+        "count": 4,
+        "columns": 4
+      },
+      "fps": 4,
+      "loop": true,
+      "fallback": "idle"
+    }
+  },
+  "fallback": {
+    "state": "idle"
+  },
+  "license": {
+    "spdx": "MIT",
+    "file": "LICENSE.txt"
+  },
+  "checksums": {
+    "algorithm": "sha256",
+    "files": {
+      "LICENSE.txt": "26d8beca6ea6dd26a3670d83ce05f303e8305a5732c8996a45ea824bb162454c",
+      "assets/celebrate.png": "0c95a3621f624ae89c849838c37e0ddcc3211e0f83f351bf17ff5ceb7ce27c79",
+      "assets/cold.png": "b2a2a084978d811b82f47ae0caabf49e57a7c860dfdca98bada7013d2f3dfea4",
+      "assets/confused.png": "037f0988607c4476ef4ae73c0555c70abb00958fe2e5724e74cd47a645661f78",
+      "assets/critical.png": "52a212c7aeea2dc39a1c03cba5ea3f7e900c37ac011673684e38fa9461758039",
+      "assets/dragging.png": "d62f8ba04fb73dc086fa038a618c2cfbed4b0e8ae4aecbf7e8561bbec68ea306",
+      "assets/happy.png": "055da7442c5d7aeaa5415df144ee8205bce815f35e7d75a57e44cd86d9073cfe",
+      "assets/hot.png": "90c6665db808518455efa5e7b000020dc5070d293262abcf34897ef59d9ea954",
+      "assets/idle.png": "9d915615ec685a48c6103057461436e1aad6006ae430c40ff905d35838459833",
+      "assets/inspect.png": "de974efa64968757853b6d5d40e02ea564faf2628c8ed842b26701327c678f93",
+      "assets/point.png": "52e8d42de5896c2f670a9e28cf5da3303a6d505ae0023fef30551c2e3738d53f",
+      "assets/sleep.png": "afdfcf317491459cafd077d8a094672b0ca0ea4f57b0dc106033d2ce6ebf8663",
+      "assets/talk.png": "27b1ee99c7c5892c310427aa5723d49a2bb40091ee567185709760ea928e0e0a",
+      "assets/wake.png": "13d390c52e3269379c3384f46ca12fcd40c78d030b7bfa71156c0835c9757c30",
+      "assets/walk.png": "8eb8cdbe3a7c55d52dab89c35b96ea41272ea8a75c9c5a798e244fbbb419cea7",
+      "assets/worried.png": "8aa26c298ddb00fb13a6e75f17ce2b3d6038fbfc2cc9624947f76464460828bb",
+      "behaviors.json": "4db03c63a54d290bf24aeb7bbaa7d582a48c5e79e6a29806969603204aa1afb5",
+      "phrases.json": "f5bbedb077d8d129c44a0e55642f8ae3aea4688dd2c1ff8d7dcfef324105b28b",
+      "preview.png": "558f26272d43aba2fd9c213db126caa294961cd7e968263ddaca47b8d25e52ea"
+    }
+  }
+}

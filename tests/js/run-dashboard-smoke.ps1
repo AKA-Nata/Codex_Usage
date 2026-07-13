@@ -16,6 +16,7 @@ $DashboardOutPath = Join-Path $TempRoot "$ArtifactPrefix-dashboard.out.log"
 $DashboardErrPath = Join-Path $TempRoot "$ArtifactPrefix-dashboard.err.log"
 $EdgeOutPath = Join-Path $TempRoot "$ArtifactPrefix-edge.out.log"
 $EdgeErrPath = Join-Path $TempRoot "$ArtifactPrefix-edge.err.log"
+$CharacterRegistryPath = Join-Path $TempRoot "$ArtifactPrefix-character-registry"
 $DashboardProcess = $null
 $EdgeProcess = $null
 $CdpSocket = $null
@@ -628,12 +629,45 @@ function Test-BehaviorStudio {
   status: document.getElementById("behaviorStudioStatus").textContent,
 }))()
 '@
-    Assert-Condition ($Structure.tabs -eq 6) "Studio não exibiu as seis abas obrigatórias."
+    Assert-Condition ($Structure.tabs -eq 7) "Studio não exibiu as sete abas obrigatórias."
     Assert-Condition ($Structure.visiblePanel -eq 1) "Studio exibiu mais de um painel de aba."
     Assert-Condition ($Structure.rules -gt 0) "Lista de comportamentos ficou vazia. Status: $($Structure.status)"
     Assert-Condition ($Structure.cardsBehind -eq 6) "Dashboard principal foi alterado ao abrir o Studio."
     Assert-Condition ($Structure.dialogRole -eq "dialog") "Studio não expôs semântica de diálogo."
-    Add-Check "Studio abre sobre dashboard preservado com seis abas"
+    Add-Check "Studio abre sobre dashboard preservado com sete abas"
+
+    $null = Invoke-CdpExpression "document.querySelector('[data-behavior-tab=characters]').click(); true"
+    Wait-CdpCondition "!document.getElementById('behaviorPanelCharacters').hidden && document.querySelectorAll('[data-character-id]').length >= 5" 12000
+    Wait-CdpCondition "document.querySelector('[data-character-preview-sprite]')?.dataset.animationStatus === 'ready'" 12000
+    $Characters = Invoke-CdpExpression @'
+(() => ({
+  total: document.querySelectorAll("[data-character-id]").length,
+  sentinel: Boolean(document.querySelector('[data-character-id="sentinel"]')),
+  preview: document.querySelector("[data-character-preview-sprite]")?.dataset.animationStatus,
+  stateControl: Boolean(document.querySelector('[data-character-control="preview-state"]')),
+  fpsControl: Boolean(document.querySelector('[data-character-control="preview-fps"]')),
+  packageInput: Boolean(document.querySelector('[data-character-control="package-file"]')),
+  validateAction: Boolean(document.querySelector('[data-character-action="validate-package"]')),
+  restoreAction: Boolean(document.querySelector('[data-character-action="restore-natives"]')),
+}))()
+'@
+    Assert-Condition ($Characters.total -ge 5 -and [bool] $Characters.sentinel) "Aba Personagens não listou nativos e o pacote Sentinela."
+    Assert-Condition ($Characters.preview -eq "ready" -and [bool] $Characters.stateControl -and [bool] $Characters.fpsControl) "Preview da aba Personagens não ficou pronto."
+    Assert-Condition ([bool] $Characters.packageInput -and [bool] $Characters.validateAction -and [bool] $Characters.restoreAction) "Controles de pacote da aba Personagens estão incompletos."
+    Add-Check "biblioteca de personagens e pacote real instalado"
+    Add-Check "preview e diagnóstico da aba Personagens"
+    Add-Check "importação, validação e restauração de pacotes disponíveis"
+
+    $null = Invoke-CdpExpression "document.querySelector('[data-character-id=sentinel]').click(); true"
+    Wait-CdpCondition "document.querySelector('[data-character-detail] h3')?.textContent.includes('Sentinela')"
+    $null = Invoke-CdpExpression "document.querySelector('[data-character-action=toggle]').click(); true"
+    Wait-CdpCondition "document.querySelector('[data-character-action=toggle]')?.textContent.includes('Ativar') && ![...document.querySelectorAll('#spriteCharacterOptions [data-sprite]')].some(item => item.dataset.sprite === 'sentinel')" 12000
+    $null = Invoke-CdpExpression "document.querySelector('[data-character-action=toggle]').click(); true"
+    Wait-CdpCondition "document.querySelector('[data-character-action=toggle]')?.textContent.includes('Desativar') && [...document.querySelectorAll('#spriteCharacterOptions [data-sprite]')].some(item => item.dataset.sprite === 'sentinel')" 12000
+    Add-Check "ativação de pacote sincroniza catálogo, motor e aparência"
+
+    $null = Invoke-CdpExpression "document.querySelector('[data-behavior-tab=behaviors]').click(); true"
+    Wait-CdpCondition "!document.getElementById('behaviorPanelBehaviors').hidden && document.querySelector('[data-action=new-trigger]')"
 
     $Crud = Invoke-CdpExpression @'
 (() => {
@@ -647,7 +681,7 @@ function Test-BehaviorStudio {
     after: document.querySelectorAll(".behavior-rule-card").length,
     id,
     conditions: form?.querySelectorAll("[data-condition-row]").length || 0,
-    hasCharacter: Boolean(form?.querySelector('[name="character"]')),
+    hasCharacter: Boolean(form?.querySelector('[name="characterSelectorKind"]') && form?.querySelector('[name="characterSelectorValue"]')),
     hasRepeat: Boolean(form?.querySelector('[name="repeatWhileActive"]')),
   };
 })()
@@ -828,7 +862,8 @@ try {
     $DashboardUrl = "http://127.0.0.1:$ResolvedDashboardPort/"
 
     $DashboardArguments = @($Runtime.PrefixArgs) + @(
-        "dashboard_server.py", "--host", "127.0.0.1", "--port", "$ResolvedDashboardPort"
+        "dashboard_server.py", "--host", "127.0.0.1", "--port", "$ResolvedDashboardPort",
+        "--character-registry-root", $CharacterRegistryPath
     )
     $DashboardProcess = Start-Process `
         -FilePath $Runtime.Executable `
@@ -839,6 +874,18 @@ try {
         -RedirectStandardOutput $DashboardOutPath `
         -RedirectStandardError $DashboardErrPath
     Wait-HttpOk $DashboardUrl $DashboardProcess
+    $PackagePath = Join-Path $ProjectRoot "examples\characters\sentinel.codex-character.zip"
+    $CharacterCatalog = Invoke-RestMethod -UseBasicParsing `
+        -Uri "${DashboardUrl}api/studio/characters/v1" `
+        -TimeoutSec 15
+    $InstallResponse = Invoke-WebRequest -UseBasicParsing `
+        -Method Post `
+        -Uri "${DashboardUrl}api/studio/characters/v1/install" `
+        -InFile $PackagePath `
+        -Headers @{ "If-Match" = "`"$($CharacterCatalog.revision)`"" } `
+        -ContentType "application/vnd.codex-character+zip" `
+        -TimeoutSec 15
+    Assert-Condition ($InstallResponse.StatusCode -eq 201) "Smoke não instalou o pacote oficial Sentinela."
 
     $EdgeArguments = @(
         "--headless=new",
@@ -933,4 +980,5 @@ finally {
     @($DashboardOutPath, $DashboardErrPath, $EdgeOutPath, $EdgeErrPath) | ForEach-Object {
         Remove-SafeTemporaryPath $_ $false
     }
+    Remove-SafeTemporaryPath $CharacterRegistryPath $true
 }

@@ -16,8 +16,10 @@ if (Get-Command node -ErrorAction SilentlyContinue) {
     $JavaScriptFiles = @(
         "web/app.js",
         "web/character-registry.js",
+        "web/character-selector.js",
         "web/behavior-studio-model.js",
         "web/behavior-studio-animation-preview.js",
+        "web/behavior-studio-characters-tab.js",
         "web/behavior-studio.js",
         "web/sprite-animation-engine.js",
         "web/sprite-engine.js",

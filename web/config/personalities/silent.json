@@ -1,0 +1,10 @@
+{
+  "$schema": "../personalities.schema.json",
+  "schemaVersion": "1.0.0",
+  "id": "silent",
+  "name": "Silenciosa",
+  "version": "1.0.0",
+  "description": "Prioriza animações e só usa texto para estados relevantes.",
+  "style": { "tone": "discreto", "verbosity": "silent", "humor": "none", "proactivity": "low" },
+  "fallbackPhrases": ["Monitorando."]
+}

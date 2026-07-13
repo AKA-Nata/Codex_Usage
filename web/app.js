@@ -295,6 +295,7 @@ function renderCharacterOptions() {
     button.dataset.sprite = character.id;
     button.textContent = character.name;
     button.title = `${character.source} · ${character.version || "fallback"}`;
+    button.classList.toggle("active", character.id === state.design.sprite);
     fragment.appendChild(button);
   });
   grid.replaceChildren(fragment);
@@ -411,7 +412,10 @@ function bindEvents() {
   byId("refreshButton").addEventListener("click", refreshNow);
 
   document.querySelectorAll("[data-template]").forEach(button => button.addEventListener("click", () => updateDesign({ template: button.dataset.template, ...templates[button.dataset.template] })));
-  document.querySelectorAll(".sprite-option").forEach(button => button.addEventListener("click", () => updateDesign({ sprite: button.dataset.sprite })));
+  byId("spriteCharacterOptions").addEventListener("click", event => {
+    const button = event.target.closest?.(".sprite-option[data-sprite]");
+    if (button) updateDesign({ sprite: button.dataset.sprite });
+  });
 
   [["titleInput", "title"], ["accentInput", "accent"], ["accent2Input", "accent2"], ["bgInput", "bg"], ["customCssInput", "customCss"]]
     .forEach(([id, key]) => byId(id).addEventListener("input", event => updateDesign({ [key]: event.target.value })));
@@ -440,10 +444,14 @@ function bindEvents() {
 async function bootstrap() {
   state.characterRegistry = new CharacterRegistry();
   await state.characterRegistry.loadNative();
+  await state.characterRegistry.refreshCatalog();
   await Promise.all(NATIVE_CHARACTER_IDS.map(id => state.characterRegistry.preload(id, ["idle"])));
   state.animationEngine = new SpriteAnimationEngine({ registry: state.characterRegistry });
   renderCharacterOptions();
-  const behaviorReport = await loadSpriteBehaviorConfig("./config/sprite-behaviors.json");
+  const officialBehaviorReport = await loadSpriteBehaviorConfig("./config/sprite-behaviors.json");
+  const behaviorReport = await loadSpriteBehaviorConfig("/api/behaviors/v1/effective", {
+    fallbackConfig: officialBehaviorReport.config,
+  });
   state.behaviorConfig = behaviorReport.config;
   state.spriteEngine = new SpriteReactionEngine({
     root: byId("spriteWorld"),
@@ -468,10 +476,25 @@ async function bootstrap() {
     getRealContext: currentSpriteContext,
     characterRegistry: state.characterRegistry,
     animationEngine: state.animationEngine,
+    onCharacterCatalogChanged: async () => {
+      await state.characterRegistry.refreshCatalog();
+      renderCharacterOptions();
+      const availableIds = state.characterRegistry.list().map(character => character.id);
+      if (!availableIds.includes(state.design.sprite)) {
+        updateDesign({ sprite: availableIds.includes("explorer") ? "explorer" : availableIds[0] });
+      }
+      const effective = await loadSpriteBehaviorConfig("/api/behaviors/v1/effective", { fallbackConfig: state.behaviorConfig });
+      if (effective.config) {
+        state.behaviorConfig = effective.config;
+        state.spriteEngine?.setBehaviors(effective.config, effective);
+      }
+      state.spriteEngine?.rebuild();
+    },
     onOpenAppearance: () => setStudio(true),
     onSavedConfig: async (config, report) => {
-      state.behaviorConfig = config;
-      state.spriteEngine?.setBehaviors(config, { valid: true, source: "studio", usingFallback: false, issues: report.errors || [] });
+      const effective = await loadSpriteBehaviorConfig("/api/behaviors/v1/effective", { fallbackConfig: config });
+      state.behaviorConfig = effective.config || config;
+      state.spriteEngine?.setBehaviors(state.behaviorConfig, { valid: true, source: "studio", usingFallback: false, issues: report.errors || [] });
       applyDesign();
       ingestSpriteContext();
     },

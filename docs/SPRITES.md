@@ -31,6 +31,11 @@ e resolve `estado solicitado → idle → PNG legado`. O
 por FPS, respeita loop e pause, espelha pela orientação nativa e fixa o primeiro
 frame em reduced motion. O motor de reações apenas escolhe o estado.
 
+Na versão 5.0, os mesmos contratos também são carregados de pacotes
+`.codex-character.zip` instalados no registry local. Os quatro nativos possuem
+pacotes restauráveis, e o Sentinela em `examples/characters/` demonstra a
+extensão pública sem substituir o fallback legado.
+
 ## Estados e mapeamento visual
 
 As taxas abaixo são lidas do manifesto e controlam frames bitmap reais. Efeitos
@@ -66,11 +71,12 @@ remover o personagem nem interromper o arraste.
 
 ## Configuração declarativa
 
-O JSON é dividido em cinco blocos funcionais:
+O JSON é dividido em seis blocos funcionais:
 
 - `metadata`: identidade, locale e versões do arquivo e do schema;
 - `macros`: dicionário de valores disponíveis para condições e frases;
 - `cards`: nomes lógicos e seletores dos destinos do painel;
+- `characterGroups`: seletores reutilizáveis de personagens;
 - `defaultBehavior`: velocidade, duração, descanso, movimento livre, destinos,
   fala casual e prevenção de colisões;
 - `phrases` e `triggers`: textos reutilizáveis e regras priorizadas.
@@ -88,9 +94,10 @@ a meia-noite, mudança de valor, clique em card ou sprite, fim de arraste,
 inatividade/retorno, erro ou recuperação da coleta, reset próximo e intervalo
 casual. A ação de cada gatilho define prioridade, cooldown, estado, destino,
 frase e se a reação deve permanecer enquanto a condição existir. O contrato
-2.0 também permite nome amigável, personagem automático ou específico, falas
-por personagem, fallback, prevenção de repetição e repetição configurável
-enquanto a condição permanece ativa.
+3.0 aceita personagem automático ou seletores por ID, grupo, tag,
+personalidade e capacidade, além de falas por personagem, fallback, prevenção
+de repetição e repetição configurável enquanto a condição permanece ativa.
+Strings do contrato 2.0 são migradas automaticamente.
 
 `durationSeconds` controla a apresentação da reação. Quando `persistent` é
 verdadeiro, `holdSeconds` define o tempo máximo que o personagem pode continuar

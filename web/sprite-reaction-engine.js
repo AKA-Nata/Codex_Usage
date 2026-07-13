@@ -6,6 +6,12 @@ import {
   defaultCharacterRegistry,
 } from "./character-registry.js";
 import { defaultSpriteAnimationEngine } from "./sprite-animation-engine.js";
+import {
+  migrateCharacterSelectors,
+  normalizeCharacterSelector,
+  selectorMatchesCharacter,
+  validateCharacterSelector,
+} from "./character-selector.js";
 
 const SPRITES = Object.fromEntries(NATIVE_CHARACTER_DEFINITIONS.map(item => [item.id, { name: item.name, url: item.legacyUrl }]));
 const SPRITE_ORDER = [...NATIVE_CHARACTER_IDS];
@@ -264,7 +270,8 @@ function reaction(values) {
     anchor: values.anchor || null,
     state: SPRITE_STATES.includes(values.state) ? values.state : "talk",
     message: String(values.message || "").trim(),
-    character: SPRITE_CHARACTER_SELECTIONS.includes(values.character) ? values.character : "auto",
+    character: normalizeCharacterSelector(values.character),
+    characterGroups: isPlainObject(values.characterGroups) ? { ...values.characterGroups } : {},
     characterMessages: isPlainObject(values.characterMessages) ? { ...values.characterMessages } : {},
     fallbackMessage: String(values.fallbackMessage || "").trim(),
     preventRepeat: values.preventRepeat !== false,
@@ -562,7 +569,7 @@ export function validateSpriteBehaviorConfig(raw) {
   if (raw.$schema !== "./sprite-behaviors.schema.json") {
     errors.push(configIssue("$.$schema", "invalid_schema_reference", "$schema deve apontar para ./sprite-behaviors.schema.json."));
   }
-  const allowedTopLevel = new Set(["$schema", "metadata", "macros", "cards", "defaultBehavior", "phrases", "triggers"]);
+  const allowedTopLevel = new Set(["$schema", "metadata", "macros", "cards", "defaultBehavior", "characterGroups", "phrases", "triggers"]);
   Object.keys(raw).forEach(key => {
     if (!allowedTopLevel.has(key)) errors.push(configIssue(`$.${key}`, "unknown_property", `Propriedade não prevista pelo schema: ${key}.`));
   });
@@ -572,6 +579,23 @@ export function validateSpriteBehaviorConfig(raw) {
   ["phrases", "triggers"].forEach(key => {
     if (!Array.isArray(raw[key]) || !raw[key].length) errors.push(configIssue(`$.${key}`, "missing_array", `${key} deve ser um array não vazio.`));
   });
+  if (raw.characterGroups !== undefined) {
+    if (!isPlainObject(raw.characterGroups)) {
+      errors.push(configIssue("$.characterGroups", "invalid_character_groups", "characterGroups deve ser um objeto."));
+    } else {
+      Object.entries(raw.characterGroups).forEach(([group, selectors]) => {
+        if (!/^[a-z][a-z0-9_-]{1,63}$/.test(group) || !Array.isArray(selectors) || !selectors.length) {
+          errors.push(configIssue(`$.characterGroups.${group}`, "invalid_character_group", "Grupo de personagens inválido ou vazio."));
+          return;
+        }
+        selectors.forEach((selector, index) => {
+          if (!validateCharacterSelector(selector).valid) {
+            errors.push(configIssue(`$.characterGroups.${group}[${index}]`, "invalid_character", "Seletor de grupo inválido."));
+          }
+        });
+      });
+    }
+  }
   if (isPlainObject(raw.metadata)) {
     validateAllowedProperties(raw.metadata, ["id", "version", "schemaVersion", "locale", "description"], "$.metadata", errors);
     ["id", "version", "schemaVersion", "locale", "description"].forEach(field => {
@@ -782,8 +806,8 @@ export function validateSpriteBehaviorConfig(raw) {
       if (trigger.name !== undefined && (typeof trigger.name !== "string" || !trigger.name.trim() || trigger.name.length > 80)) {
         errors.push(configIssue(`${path}.name`, "invalid_name", "name deve ter entre 1 e 80 caracteres."));
       }
-      if (trigger.character !== undefined && !SPRITE_CHARACTER_SELECTIONS.includes(trigger.character)) {
-        errors.push(configIssue(`${path}.character`, "invalid_character", `Personagem desconhecido: ${trigger.character}.`));
+      if (trigger.character !== undefined && !validateCharacterSelector(trigger.character).valid) {
+        errors.push(configIssue(`${path}.character`, "invalid_character", "Seletor de personagem inválido."));
       }
       if (trigger.topic !== undefined && (typeof trigger.topic !== "string" || !/^[a-z][a-z0-9_]*$/.test(trigger.topic))) {
         errors.push(configIssue(`${path}.topic`, "invalid_id", "topic deve usar um identificador seguro."));
@@ -800,7 +824,7 @@ export function validateSpriteBehaviorConfig(raw) {
       const characterPhrasesValid = isPlainObject(trigger.characterPhrases)
         && Object.keys(trigger.characterPhrases).length > 0
         && Object.entries(trigger.characterPhrases).every(([character, texts]) => (
-          SPRITE_ORDER.includes(character)
+          /^[a-z][a-z0-9_-]{1,63}$/.test(character)
           && Array.isArray(texts)
           && texts.length
           && texts.every(text => typeof text === "string" && text.length >= 1 && text.length <= 160)
@@ -847,17 +871,18 @@ export function validateSpriteBehaviorConfig(raw) {
 export const validateBehaviorConfig = validateSpriteBehaviorConfig;
 
 export function compileSpriteBehaviorConfig(raw) {
-  const report = validateSpriteBehaviorConfig(raw);
+  const migrated = migrateCharacterSelectors(raw).config;
+  const report = validateSpriteBehaviorConfig(migrated);
   if (!report.valid) return { ...report, config: null };
-  const phrasesById = Object.fromEntries((raw.phrases || []).map(group => [group.id, [...group.texts]]));
+  const phrasesById = Object.fromEntries((migrated.phrases || []).map(group => [group.id, [...group.texts]]));
   const config = {
-    ...raw,
-    metadata: { ...raw.metadata },
-    macros: { ...raw.macros },
-    cards: { ...raw.cards },
-    defaultBehavior: { ...raw.defaultBehavior },
-    phrases: [...raw.phrases],
-    triggers: [...raw.triggers],
+    ...migrated,
+    metadata: { ...migrated.metadata },
+    macros: { ...migrated.macros },
+    cards: { ...migrated.cards },
+    defaultBehavior: { ...migrated.defaultBehavior },
+    phrases: [...migrated.phrases],
+    triggers: [...migrated.triggers],
     _compiled: { phrasesById },
   };
   return { ...report, config };
@@ -1112,7 +1137,7 @@ export function evaluateConfiguredTriggers(input, behaviorConfig, options = {}) 
     const eventType = eventDescriptor?.type || null;
     const pool = triggerPhrasePool(trigger, config);
     const fallbackMessage = renderSpritePhrase(trigger.fallbackPhrase || "", macros);
-    const characterMessages = Object.fromEntries(SPRITE_ORDER.map(character => {
+    const characterMessages = Object.fromEntries(Object.keys(trigger.characterPhrases || {}).map(character => {
       const characterPool = triggerCharacterPhrasePool(trigger, character);
       const characterTemplate = selectPhraseTemplate(characterPool, random);
       return [character, renderSpritePhrase(characterTemplate, macros)];
@@ -1137,6 +1162,7 @@ export function evaluateConfiguredTriggers(input, behaviorConfig, options = {}) 
       state: trigger.spriteState,
       message: renderSpritePhrase(template, macros) || fallbackMessage,
       character: trigger.character || "auto",
+      characterGroups: config.characterGroups || {},
       characterMessages,
       fallbackMessage,
       preventRepeat: trigger.preventRepeat !== false,
@@ -1473,7 +1499,7 @@ export class ReactionEventQueue {
 }
 
 function companionMatchesEvent(companion, event = {}) {
-  if (event.character && event.character !== "auto") return companion.type === event.character;
+  if (!selectorMatchesCharacter(event.character, { ...companion, id: companion.type }, { groups: event.characterGroups || {} })) return false;
   const hasGenericMessage = Boolean(event.message || event.fallbackMessage);
   const hasCharacterMessages = Object.keys(event.characterMessages || {}).length > 0;
   return hasGenericMessage || !hasCharacterMessages || Boolean(event.characterMessages?.[companion.type]);
@@ -1601,6 +1627,7 @@ export class SpriteReactionEngine {
     this.resizeTimer = null;
     this.reducedMotionQuery = window.matchMedia?.("(prefers-reduced-motion: reduce)") || null;
     this.reducedMotion = Boolean(this.reducedMotionQuery?.matches);
+    this.animationEngine?.setReducedMotion(this.reducedMotion);
 
     this._boundFrame = timestamp => this.frame(timestamp);
     this._boundResize = () => {
@@ -1694,7 +1721,10 @@ export class SpriteReactionEngine {
     this.settings.speed = clamp(finiteNumber(this.settings.speed) || 1, 0.55, 1.7);
     const configuredTalkInterval = finiteNumber(this.behaviorConfig?.defaultBehavior?.casualSpeech?.intervalSeconds?.min);
     this.settings.talkInterval = clamp(finiteNumber(this.settings.talkInterval) || configuredTalkInterval || 18, 8, 180);
-    this.settings.sprite = SPRITES[this.settings.sprite] ? this.settings.sprite : "explorer";
+    const availableIds = this.availableCharacterIds();
+    this.settings.sprite = availableIds.includes(this.settings.sprite)
+      ? this.settings.sprite
+      : availableIds.includes("explorer") ? "explorer" : availableIds[0];
     ["enabled", "roam", "reactions", "speech", "movement"].forEach(key => {
       this.settings[key] = Boolean(this.settings[key]);
     });
@@ -1873,9 +1903,10 @@ export class SpriteReactionEngine {
     this.companions = [];
     this.queue.activeSignatures.clear();
     this.root.classList.toggle("hidden", !this.settings.enabled);
+    const characterIds = this.availableCharacterIds();
     for (let index = 0; index < this.settings.count; index += 1) {
-      const startIndex = Math.max(0, SPRITE_ORDER.indexOf(this.settings.sprite));
-      const spriteType = SPRITE_ORDER[(startIndex + index) % SPRITE_ORDER.length];
+      const startIndex = Math.max(0, characterIds.indexOf(this.settings.sprite));
+      const spriteType = characterIds[(startIndex + index) % characterIds.length];
       const companion = this.createCompanion(index, spriteType);
       this.companions.push(companion);
       this.root.appendChild(companion.element);
@@ -1893,6 +1924,15 @@ export class SpriteReactionEngine {
       });
       this.separateCompanions();
     });
+  }
+
+  availableCharacterIds() {
+    const catalog = this.characterRegistry?.list?.() || [];
+    const ids = catalog
+      .filter(character => character.enabled !== false && character.compatible !== false && character.valid !== false)
+      .map(character => character.id)
+      .filter(Boolean);
+    return ids.length ? [...new Set(ids)] : [...SPRITE_ORDER];
   }
 
   createCompanion(index, spriteType) {
@@ -1916,7 +1956,15 @@ export class SpriteReactionEngine {
     const companion = {
       id: index + 1,
       type: spriteType,
+      characterId: spriteType,
       name: sprite.name,
+      enabled: registryCharacter?.enabled !== false,
+      compatible: registryCharacter?.compatible !== false,
+      valid: registryCharacter?.valid !== false,
+      personality: registryCharacter?.manifest?.personality || registryCharacter?.personality || null,
+      tags: registryCharacter?.manifest?.tags || registryCharacter?.tags || [],
+      capabilities: registryCharacter?.manifest?.capabilities || registryCharacter?.capabilities || [],
+      groups: registryCharacter?.manifest?.groups || registryCharacter?.groups || [],
       element,
       body: element.querySelector(".sprite-body"),
       bubble: element.querySelector(".sprite-bubble"),

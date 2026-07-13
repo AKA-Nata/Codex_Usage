@@ -16,5 +16,7 @@ Thumbs.db
 .DS_Store
 
 # Pacotes locais potencialmente sensíveis
-.git.zip
-README.zip
+.zip
+*.zip
+.agents
+.codex

@@ -1,6 +1,15 @@
 
 # Changelog
 
+## 5.1.0
+
+- Providers Codex/Claude independentes, cards dinâmicos, macros Claude e ação
+  local fixa para abrir Claude Code.
+- 26 pacotes bundled de fan-art original com geração PNG determinística e
+  instalação pelo catálogo.
+- Filtros por origem, tag, personalidade, instalação e estado sem pré-carregar
+  assets; bateria atual: 59 Python, 55 JavaScript, Edge 53/53 e smoke 30.
+
 ## 5.0.0
 
 - Adicionada a aba Personagens ao Studio, com biblioteca, preview real,

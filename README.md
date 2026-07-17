@@ -8,6 +8,18 @@ Esta distribuição **não cria VENV, não instala pacotes e não executa pip**.
 Todos os processos utilizam exclusivamente o Python e as bibliotecas já
 instalados na máquina.
 
+## Multi-provider e catálogo
+
+O nome histórico foi preservado, mas o painel agora agrega Codex e Claude em
+providers independentes, com cards dinâmicos por janela. A CLI Claude somente
+confirma disponibilidade; sem fonte verificável, o dashboard mostra
+`unavailable`/`unsupported`, nunca `0%`. O botão Abrir Claude Code é uma ação
+local fixa e segura.
+
+A biblioteca inclui nativos, bundled e instalados. Busca e filtros de origem,
+tag, personalidade, instalação e estado podem ser combinados sem pré-carregar
+sprite sheets; assets são carregados apenas para o personagem selecionado.
+
 ## O que o painel mostra
 
 - Quatro cards ambientais: hora/data, interação, clima e máquina.

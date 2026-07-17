@@ -1,5 +1,16 @@
 # Arquitetura
 
+## Providers de uso
+
+```
+Codex CDP ─────┐
+Claude CLI probe ├─ AIUsageProvider ─ API multi-provider ─ Dashboard / Studio / Reaction Engine
+Claude CDP ────┘
+```
+
+Cada provider mantém health e último dado válido independentes. As janelas são
+dinâmicas e uma falha não afeta o outro provider.
+
 ## Componentes
 
 ### Coletor CDP

@@ -18,6 +18,44 @@ function uniqueStrings(values) {
   return [...new Set((Array.isArray(values) ? values : []).map(value => String(value || "").trim()).filter(Boolean))];
 }
 
+function normalizedFilterValue(value) {
+  return String(value || "").trim().toLocaleLowerCase("pt-BR");
+}
+
+export function catalogFilterOptions(characters, field) {
+  const values = new Set();
+  (Array.isArray(characters) ? characters : []).forEach(character => {
+    const source = field === "personality" ? [personalityLabel(character.personality)] : character.tags;
+    (Array.isArray(source) ? source : [source]).forEach(value => {
+      const text = String(value || "").trim();
+      if (text) values.add(text);
+    });
+  });
+  return [...values].sort((left, right) => left.localeCompare(right, "pt-BR", { sensitivity: "base" }));
+}
+
+export function filterCatalogCharacters(characters, filters = {}) {
+  const query = normalizedFilterValue(filters.search);
+  const tag = normalizedFilterValue(filters.tag);
+  const personality = normalizedFilterValue(filters.personality);
+  return (Array.isArray(characters) ? characters : []).filter(character => {
+    const haystack = [character.id, character.name, character.author, personalityLabel(character.personality), ...(character.tags || []), ...(character.capabilities || [])].join(" ").toLocaleLowerCase("pt-BR");
+    if (query && !haystack.includes(query)) return false;
+    if (filters.source && filters.source !== "all" && character.source !== filters.source) return false;
+    if (tag && !(character.tags || []).some(value => normalizedFilterValue(value) === tag)) return false;
+    if (personality && normalizedFilterValue(personalityLabel(character.personality)) !== personality) return false;
+    if (filters.installation === "installed" && character.installed === false) return false;
+    if (filters.installation === "uninstalled" && character.installed !== false) return false;
+    if (filters.status === "enabled" && !character.enabled) return false;
+    if (filters.status === "disabled" && character.enabled) return false;
+    if (filters.status === "update" && character.updateAvailable !== true) return false;
+    if (filters.status === "diagnostic" && character.valid) return false;
+    if (filters.compatibility === "compatible" && !character.compatible) return false;
+    if (filters.compatibility === "incompatible" && character.compatible) return false;
+    return true;
+  });
+}
+
 function asArray(value) {
   if (Array.isArray(value)) return value;
   if (value === null || value === undefined || value === "") return [];
@@ -87,6 +125,7 @@ function mergeCharacter(left = {}, right = {}) {
     author: authorLabel(merged.author || manifest.author),
     version: merged.activeVersion || merged.version || manifest.version || "—",
     source,
+    installed: merged.installed !== false && source !== "bundled",
     native: merged.native === true || source === "native",
     enabled: merged.enabled !== false && merged.active !== false,
     compatible: merged.compatible !== false && merged.compatibility?.compatible !== false,
@@ -184,6 +223,9 @@ export class BehaviorStudioCharactersTab {
     this.previewDiagnostic = null;
     this.search = "";
     this.sourceFilter = "all";
+    this.tagFilter = "";
+    this.personalityFilter = "";
+    this.installationFilter = "all";
     this.statusFilter = "all";
     this.compatibilityFilter = "all";
     this.packageFile = null;
@@ -309,20 +351,7 @@ export class BehaviorStudioCharactersTab {
   }
 
   get visibleCharacters() {
-    const query = this.search.trim().toLocaleLowerCase("pt-BR");
-    return this.characters.filter(character => {
-      const haystack = [character.id, character.name, character.author, personalityLabel(character.personality), ...character.tags, ...character.capabilities]
-        .join(" ").toLocaleLowerCase("pt-BR");
-      if (query && !haystack.includes(query)) return false;
-      if (this.sourceFilter !== "all" && character.source !== this.sourceFilter) return false;
-      if (this.statusFilter === "enabled" && !character.enabled) return false;
-      if (this.statusFilter === "disabled" && character.enabled) return false;
-      if (this.statusFilter === "update" && character.updateAvailable !== true) return false;
-      if (this.statusFilter === "diagnostic" && character.valid) return false;
-      if (this.compatibilityFilter === "compatible" && !character.compatible) return false;
-      if (this.compatibilityFilter === "incompatible" && character.compatible) return false;
-      return true;
-    });
+    return filterCatalogCharacters(this.characters, { search: this.search, source: this.sourceFilter, tag: this.tagFilter, personality: this.personalityFilter, installation: this.installationFilter, status: this.statusFilter, compatibility: this.compatibilityFilter });
   }
 
   ensurePreviewState() {
@@ -349,6 +378,15 @@ export class BehaviorStudioCharactersTab {
                 ${optionHtml("bundled", this.sourceFilter, "Bundled")}
                 ${optionHtml("installed", this.sourceFilter, "Instalados")}
               </select>
+              <select class="behavior-select" aria-label="Filtrar por tag" data-character-control="tag">
+                ${optionHtml("", this.tagFilter, "Todas as tags")}${catalogFilterOptions(this.characters, "tag").map(tag => optionHtml(tag, this.tagFilter)).join("")}
+              </select>
+              <select class="behavior-select" aria-label="Filtrar por personalidade" data-character-control="personality">
+                ${optionHtml("", this.personalityFilter, "Todas as personalidades")}${catalogFilterOptions(this.characters, "personality").map(value => optionHtml(value, this.personalityFilter)).join("")}
+              </select>
+              <select class="behavior-select" aria-label="Filtrar por instalação" data-character-control="installation">
+                ${optionHtml("all", this.installationFilter, "Instalados e catálogo")}${optionHtml("installed", this.installationFilter, "Instalados")}${optionHtml("uninstalled", this.installationFilter, "Não instalados")}
+              </select>
               <select class="behavior-select" aria-label="Filtrar por estado" data-character-control="status">
                 ${optionHtml("all", this.statusFilter, "Todos os estados")}
                 ${optionHtml("enabled", this.statusFilter, "Ativos")}
@@ -361,6 +399,7 @@ export class BehaviorStudioCharactersTab {
                 ${optionHtml("compatible", this.compatibilityFilter, "Compatíveis")}
                 ${optionHtml("incompatible", this.compatibilityFilter, "Incompatíveis")}
               </select>
+              <button class="button" type="button" data-character-action="clear-filters">Limpar filtros</button>
             </div>
           </div>
           <div class="behavior-sidebar-list" role="listbox" aria-label="Personagens" data-character-list>
@@ -569,6 +608,9 @@ export class BehaviorStudioCharactersTab {
   handleChange(event) {
     const control = event.target?.dataset?.characterControl;
     if (control === "source") { this.sourceFilter = event.target.value; this.renderLibrary(); }
+    if (control === "tag") { this.tagFilter = event.target.value; this.renderLibrary(); }
+    if (control === "personality") { this.personalityFilter = event.target.value; this.renderLibrary(); }
+    if (control === "installation") { this.installationFilter = event.target.value; this.renderLibrary(); }
     if (control === "status") { this.statusFilter = event.target.value; this.renderLibrary(); }
     if (control === "compatibility") { this.compatibilityFilter = event.target.value; this.renderLibrary(); }
     if (control === "preview-state") {
@@ -578,6 +620,12 @@ export class BehaviorStudioCharactersTab {
     if (control === "package-file") this.setPackageFile(event.target.files?.[0] || null);
   }
 
+  clearFilters() {
+    this.search = ""; this.sourceFilter = "all"; this.tagFilter = ""; this.personalityFilter = "";
+    this.installationFilter = "all"; this.statusFilter = "all"; this.compatibilityFilter = "all";
+    this.render();
+  }
+
   async handleClick(event) {
     const button = event.target.closest?.("[data-character-action]");
     if (!button || button.disabled || this.busy) return;
@@ -585,6 +633,7 @@ export class BehaviorStudioCharactersTab {
     try {
       if (action === "select") this.selectCharacter(button.dataset.characterId);
       else if (action === "refresh") await this.refresh();
+      else if (action === "clear-filters") this.clearFilters();
       else if (action === "play") this.setPreviewPlaying(true);
       else if (action === "pause") this.setPreviewPlaying(false);
       else if (action === "choose-file") this.root.querySelector('[data-character-control="package-file"]')?.click();
@@ -937,6 +986,8 @@ export function createBehaviorStudioCharactersTab(options) {
 }
 
 export const __charactersTabInternals = Object.freeze({
+  catalogFilterOptions,
+  filterCatalogCharacters,
   mergeCharacter,
   mergePayloads,
   normalizeDiagnostics,

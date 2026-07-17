@@ -1,5 +1,10 @@
 # Runtime Python sem VENV
 
+## Geração bundled
+
+Nenhuma dependência foi adicionada: `codex_usage/pixel_art.py` usa somente
+Standard Library para PNG, JSON, checksum e ZIP determinístico.
+
 O Codex Usage Monitor usa exclusivamente um Python já instalado e preparado na
 máquina. Nenhum script cria ambiente virtual ou instala pacotes.
 

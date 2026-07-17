@@ -1,5 +1,12 @@
 # Seguranca
 
+## Isolamento multi-provider
+
+Codex e Claude usam perfis e portas CDP loopback distintos. Cookies, tokens e
+headers não são exportados nem persistidos. Abrir Claude Code é uma ação fixa
+do servidor com argv seguro, nunca um shell arbitrário. Pacotes bundled são
+ZIPs inertes validados por checksum, PNG e NOTICE.
+
 O perfil `runtime/edge-cdp-profile` pode conter cookies e sessao. Ele fica fora
 do Git e nao deve ser compartilhado.
 

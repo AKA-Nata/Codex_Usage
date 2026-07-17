@@ -11,6 +11,13 @@ nem frases de reação.
 
 ## Personagens e assets
 
+### Providers e catálogo
+
+Os destinos incluem cards Codex e Claude por janela. `native` são IDs
+reservados, `bundled` são fan-art instalável e `installed` é a cópia no registry.
+Busca e filtros de origem, tag, personalidade, instalação e estado não carregam
+sheets: assets só são obtidos para o personagem selecionado/ativo.
+
 | Personagem | Asset-base | Canvas atual |
 | --- | --- | --- |
 | Explorador | `web/assets/sprites/explorer.png` | 445 × 445 px |

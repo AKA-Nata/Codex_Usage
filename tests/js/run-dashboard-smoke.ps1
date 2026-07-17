@@ -658,6 +658,22 @@ function Test-BehaviorStudio {
     Add-Check "preview e diagnóstico da aba Personagens"
     Add-Check "importação, validação e restauração de pacotes disponíveis"
 
+    $Filters = Invoke-CdpExpression @'
+(() => {
+  const change = (selector, value) => { const element = document.querySelector(selector); element.value = value; element.dispatchEvent(new Event("change", { bubbles: true })); };
+  const preview = document.querySelector("[data-character-preview-sprite]")?.dataset.animationStatus;
+  change('[data-character-control="source"]', "bundled");
+  change('[data-character-control="tag"]', "pokemon");
+  change('[data-character-control="personality"]', "humorous");
+  const visible = [...document.querySelectorAll("[data-character-id]")].map(item => item.dataset.characterId);
+  document.querySelector('[data-character-action="clear-filters"]')?.click();
+  return { visible, cleared: document.querySelector('[data-character-control="tag"]')?.value === "", preview };
+})()
+'@
+    Assert-Condition (($Filters.visible -join ",") -eq "gengar") "Filtros combinados bundled/pokemon/humorous não retornaram Gengar: $($Filters | ConvertTo-Json -Compress)"
+    Assert-Condition ([bool] $Filters.cleared -and $Filters.preview -eq "ready") "Limpeza de filtros ou lazy preview falhou."
+    Add-Check "filtros por origem, tag, personalidade e limpeza preservam preview lazy"
+
     $null = Invoke-CdpExpression "document.querySelector('[data-character-id=sentinel]').click(); true"
     Wait-CdpCondition "document.querySelector('[data-character-detail] h3')?.textContent.includes('Sentinela')"
     $null = Invoke-CdpExpression "document.querySelector('[data-character-action=toggle]').click(); true"

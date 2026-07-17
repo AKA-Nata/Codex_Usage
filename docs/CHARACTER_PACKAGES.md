@@ -1,5 +1,12 @@
 # Pacotes de personagens
 
+## Bundled
+
+Os 26 bundled são `.codex-character.zip` determinísticos, não nativos, gerados
+por `scripts/generate_bundled_characters.py`. Incluem preview, 15 sheets,
+checksums e NOTICE de fan-art original; a instalação pelo catálogo reutiliza o
+validator e mantém os quatro IDs nativos reservados.
+
 ## Formato público
 
 Um personagem instalável é um ZIP inerte com extensão

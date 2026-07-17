@@ -1,4 +1,13 @@
-# Contrato observado
+# Contratos observados multi-provider
+
+## Claude
+
+Claude é coletado somente pela sessão local dedicada via CDP; endpoints internos
+eventualmente observados não são API pública estável. DOM é fallback. A CLI só
+informa disponibilidade/autenticação: ela não fornece telemetria de consumo e
+nenhum percentual é inferido.
+
+## Codex
 
 A pagina de Analytics atualmente solicita um endpoint interno de uso, como:
 

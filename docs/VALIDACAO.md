@@ -2,6 +2,10 @@
 
 ## Bateria automatizada
 
+Referência atual: 59 testes Python, 55 JavaScript, 53/53 no Edge e 30
+verificações do smoke. Execute compileall, unittest, `npm run test:js`,
+`scripts/test.ps1`, os runners Edge/smoke e `git diff --check`.
+
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File .\scripts\test.ps1
@@ -27,7 +31,7 @@ A bateria automatizada desta versão deve produzir:
 | --- | --- | ---: |
 | Python | coleta, telemetria, pacotes, migração, persistência, histórico e endpoints | 57 testes |
 | JavaScript | reação, registry, animação, seletores, Studio, macros e simulador | 53 casos |
-| Dashboard no Edge | sete abas, pacote real, animações, três viewports e interação | 29 verificações |
+| Dashboard no Edge | sete abas, filtros bundled, animações, três viewports e interação | 30 verificações |
 
 Nesta versão, os 57 testes Python, os 53 casos JavaScript e as 29 verificações
 E2E foram executados com sucesso no Windows; os casos JavaScript e o smoke

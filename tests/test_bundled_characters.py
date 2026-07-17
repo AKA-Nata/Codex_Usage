@@ -41,4 +41,3 @@ class BundledCharacterTests(unittest.TestCase):
             result = service.install_bundled("pikachu")
             self.assertEqual(result["id"], "pikachu")
             self.assertEqual(service.export_package("pikachu"), (first / "pikachu.codex-character.zip").read_bytes())
-

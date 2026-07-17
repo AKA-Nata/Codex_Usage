@@ -32,6 +32,7 @@
         </div>
         <div class="top-actions" data-sprite-protected>
           <button id="refreshButton" class="button primary" type="button" title="Atualizar agora">↻ <span>Atualizar</span></button>
+          <button id="openClaudeCode" class="button" type="button" title="Abrir Claude Code" hidden>Abrir Claude Code</button>
           <button id="openBehaviorStudio" class="icon-button" type="button" aria-label="Abrir Studio de comportamentos" title="Comportamentos">✦</button>
           <button id="openStudio" class="icon-button" type="button" aria-label="Abrir personalização" title="Aparência">⚙</button>
         </div>
@@ -79,31 +80,10 @@
     </section>
 
     <div class="section-head">
-      <div data-sprite-protected><p class="eyebrow">Codex</p><h3>Capacidade disponível</h3></div>
+      <div data-sprite-protected><p class="eyebrow">Uso de IA</p><h3>Capacidade disponível</h3></div>
     </div>
 
-    <section class="usage-grid">
-      <article id="card-five-hour" class="usage-card" data-sprite-anchor="codex-5h">
-        <div class="usage-content" data-sprite-protected>
-          <p class="card-label">Limite de uso de 5 horas</p>
-          <div class="percent-row"><p id="percent5h" class="percent">--%</p><small>restantes</small></div>
-          <div class="progress"><div id="fill5h" class="fill"></div></div>
-          <p id="countdown5h" class="countdown" data-reset-at="">Redefinição: --</p>
-          <p id="exact5h" class="exact-time">--</p>
-        </div>
-        <span class="sprite-safe-zone" data-sprite-safe-zone aria-hidden="true"></span>
-      </article>
-      <article id="card-weekly" class="usage-card" data-sprite-anchor="codex-weekly">
-        <div class="usage-content" data-sprite-protected>
-          <p class="card-label">Limite de uso semanal</p>
-          <div class="percent-row"><p id="percentWeekly" class="percent">--%</p><small>restantes</small></div>
-          <div class="progress"><div id="fillWeekly" class="fill"></div></div>
-          <p id="countdownWeekly" class="countdown" data-reset-at="">Redefinição: --</p>
-          <p id="exactWeekly" class="exact-time">--</p>
-        </div>
-        <span class="sprite-safe-zone" data-sprite-safe-zone aria-hidden="true"></span>
-      </article>
-    </section>
+    <section id="providerCards" class="usage-grid" aria-live="polite"></section>
   </main>
 
   <div id="spriteWorld" class="sprite-world" aria-live="polite"></div>

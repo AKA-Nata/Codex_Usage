@@ -152,6 +152,14 @@
       "fallback": false,
       "description": "Indica se o limite semanal foi atingido."
     },
+    "claude_status": { "token": "{{claude_status}}", "origin": "provedor Claude", "sourcePath": "claude.status", "type": "string", "unit": "", "fallback": "indisponível", "description": "Estado verificável da coleta do Claude." },
+    "claude_ultima_atualizacao": { "token": "{{claude_ultima_atualizacao}}", "origin": "provedor Claude", "sourcePath": "claude.collectedAtMs", "type": "datetime", "unit": "", "fallback": "atualização indisponível", "description": "Última coleta válida do Claude." },
+    "claude_session_percentual": { "token": "{{claude_session_percentual}}", "origin": "uso Claude", "sourcePath": "claude.sessionPercent", "type": "number", "unit": "%", "fallback": "sessão indisponível", "description": "Percentual restante da sessão Claude." },
+    "claude_session_reset": { "token": "{{claude_session_reset}}", "origin": "uso Claude", "sourcePath": "claude.sessionResetSeconds", "type": "duration", "unit": "s", "fallback": "reset indisponível", "description": "Tempo até o reset da sessão Claude." },
+    "claude_session_limite_atingido": { "token": "{{claude_session_limite_atingido}}", "origin": "uso Claude", "sourcePath": "claude.sessionLimitReached", "type": "boolean", "unit": "", "fallback": false, "description": "Indica limite de sessão Claude." },
+    "claude_weekly_percentual": { "token": "{{claude_weekly_percentual}}", "origin": "uso Claude", "sourcePath": "claude.weeklyPercent", "type": "number", "unit": "%", "fallback": "semanal indisponível", "description": "Percentual restante semanal Claude." },
+    "claude_weekly_reset": { "token": "{{claude_weekly_reset}}", "origin": "uso Claude", "sourcePath": "claude.weeklyResetSeconds", "type": "duration", "unit": "s", "fallback": "reset indisponível", "description": "Tempo até o reset semanal Claude." },
+    "claude_weekly_limite_atingido": { "token": "{{claude_weekly_limite_atingido}}", "origin": "uso Claude", "sourcePath": "claude.weeklyLimitReached", "type": "boolean", "unit": "", "fallback": false, "description": "Indica limite semanal Claude." },
     "coleta_status": {
       "token": "{{coleta_status}}",
       "origin": "saúde da coleta",
@@ -178,6 +186,8 @@
     "maquina": "#card-machine",
     "codex_5h": "#card-five-hour",
     "codex_semanal": "#card-weekly",
+    "claude_sessao": "#card-claude-session",
+    "claude_semanal": "#card-claude-weekly",
     "status": "#statusBadge"
   },
   "characterGroups": {

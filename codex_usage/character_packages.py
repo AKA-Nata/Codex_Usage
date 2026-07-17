@@ -34,6 +34,7 @@ from typing import Any, Callable, Iterable, Mapping, Sequence
 BASE_DIR = Path(__file__).resolve().parents[1]
 CHARACTER_PACKAGE_REGISTRY_ROOT = BASE_DIR / "runtime" / "character-packages"
 NATIVE_CHARACTER_PACKAGE_ROOT = BASE_DIR / "web" / "assets" / "character-packages"
+BUNDLED_CHARACTER_PACKAGE_ROOT = BASE_DIR / "web" / "assets" / "bundled-character-packages"
 CHARACTER_PACKAGE_EXTENSION = ".codex-character.zip"
 REGISTRY_SCHEMA_VERSION = "1.0.0"
 PACKAGE_SCHEMA_VERSION = "1.0.0"
@@ -240,10 +241,11 @@ _ALLOWED_ROOT_FILES = {
     "phrases.json",
     "preview.png",
     "LICENSE.txt",
+    "NOTICE.txt",
 }
-_REQUIRED_PACKAGE_FILES = frozenset(_ALLOWED_ROOT_FILES)
+_REQUIRED_PACKAGE_FILES = frozenset(_ALLOWED_ROOT_FILES - {"NOTICE.txt"})
 _JSON_FILES = frozenset({"manifest.json", "behaviors.json", "phrases.json"})
-_TEXT_FILES = frozenset({"LICENSE.txt"})
+_TEXT_FILES = frozenset({"LICENSE.txt", "NOTICE.txt"})
 _ALLOWED_COMPRESSION = frozenset({zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED})
 _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
@@ -405,7 +407,9 @@ def _validate_behavior_fragments(behaviors: Any, phrases: Any, manifest: Mapping
         "hora", "data", "tempo_sem_interacao", "temperatura", "clima", "cpu", "ram", "disco",
         "gpu", "gpu_memoria", "codex_5h_percentual", "codex_5h_reset", "codex_5h_atingido",
         "codex_semanal_percentual", "codex_semanal_reset", "codex_semanal_atingido", "coleta_status",
-        "ultima_atualizacao",
+        "ultima_atualizacao", "claude_status", "claude_ultima_atualizacao", "claude_session_percentual",
+        "claude_session_reset", "claude_session_limite_atingido", "claude_weekly_percentual",
+        "claude_weekly_reset", "claude_weekly_limite_atingido",
     }
     def validate_speech(text: Any, path: str) -> None:
         if not isinstance(text, str) or not 1 <= len(text) <= 160:
@@ -428,7 +432,7 @@ def _validate_behavior_fragments(behaviors: Any, phrases: Any, manifest: Mapping
         for text_index, text in enumerate(texts):
             validate_speech(text, f"phrases.json.groups[{index}].texts[{text_index}]")
     trigger_ids: set[str] = set()
-    allowed_cards = {"hora", "interacao", "temperatura", "maquina", "codex_5h", "codex_semanal", "status"}
+    allowed_cards = {"hora", "interacao", "temperatura", "maquina", "codex_5h", "codex_semanal", "claude_sessao", "claude_semanal", "status"}
     allowed_operators = {">", ">=", "<", "<=", "==", "between"}
     def validate_condition(node: Any, path: str, depth: int = 0) -> None:
         if depth > 12 or not isinstance(node, dict):
@@ -522,7 +526,7 @@ def _validate_behavior_contract_strict(behaviors: Any, phrases: Any, manifest: M
     metric_pattern = re.compile(r"[A-Za-z_][A-Za-z0-9_.]*")
     time_pattern = re.compile(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]")
     event_types = {"user_return", "collection_error", "collection_stale", "collection_recovery", "value_change", "click", "drag", "random_interval"}
-    cards = {"hora", "interacao", "temperatura", "maquina", "codex_5h", "codex_semanal", "status"}
+    cards = {"hora", "interacao", "temperatura", "maquina", "codex_5h", "codex_semanal", "claude_sessao", "claude_semanal", "status"}
     behavior_states = {"idle", "walk", "inspect", "point", "talk", "happy", "worried", "critical", "hot", "cold", "sleep", "wake", "confused", "celebrate"}
     weekdays = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
     macro_pattern = re.compile(r"{{\s*([a-z][a-z0-9_]*)\s*}}")
@@ -530,7 +534,9 @@ def _validate_behavior_contract_strict(behaviors: Any, phrases: Any, manifest: M
         "hora", "data", "tempo_sem_interacao", "temperatura", "clima", "cpu", "ram", "disco",
         "gpu", "gpu_memoria", "codex_5h_percentual", "codex_5h_reset", "codex_5h_atingido",
         "codex_semanal_percentual", "codex_semanal_reset", "codex_semanal_atingido", "coleta_status",
-        "ultima_atualizacao",
+        "ultima_atualizacao", "claude_status", "claude_ultima_atualizacao", "claude_session_percentual",
+        "claude_session_reset", "claude_session_limite_atingido", "claude_weekly_percentual",
+        "claude_weekly_reset", "claude_weekly_limite_atingido",
     }
 
     def speech(text: Any, path: str) -> None:
@@ -863,6 +869,8 @@ class CharacterPackageValidator:
         _validate_behavior_fragments(behaviors, phrases, parsed)
         _validate_behavior_contract_strict(behaviors, phrases, parsed)
         _validate_text(files["LICENSE.txt"], path="LICENSE.txt", limit=self.limits.text_bytes)
+        if "NOTICE.txt" in files:
+            _validate_text(files["NOTICE.txt"], path="NOTICE.txt", limit=self.limits.text_bytes)
         pngs = {
             path: _validate_png(data, path=path, limits=self.limits)
             for path, data in files.items()
@@ -961,7 +969,7 @@ class CharacterPackageValidator:
             return
         if path.startswith("assets/") and path.lower().endswith(".png") and path.count("/") >= 1:
             return
-        _invalid("file_type", "Somente JSON, PNG e LICENSE.txt previstos pelo contrato sao aceitos.", path)
+        _invalid("file_type", "Somente JSON, PNG, LICENSE.txt e NOTICE.txt previstos pelo contrato sao aceitos.", path)
 
     def _validate_manifest(self, manifest: dict[str, Any], files: Mapping[str, bytes], *, expected_id: str | None) -> dict[str, Any]:
         required = {
@@ -1204,12 +1212,14 @@ class CharacterPackageService:
         *,
         registry_root: Path = CHARACTER_PACKAGE_REGISTRY_ROOT,
         native_package_root: Path = NATIVE_CHARACTER_PACKAGE_ROOT,
+        bundled_package_root: Path = BUNDLED_CHARACTER_PACKAGE_ROOT,
         app_version: str = CURRENT_APP_VERSION,
         limits: PackageLimits = DEFAULT_LIMITS,
         reference_checker: ReferenceChecker | None = None,
     ):
         self.registry_root = Path(registry_root).resolve()
         self.native_package_root = Path(native_package_root).resolve()
+        self.bundled_package_root = Path(bundled_package_root).resolve()
         self.installed_root = self.registry_root / "installed"
         self.archives_root = self.registry_root / "archives"
         self.staging_root = self.registry_root / ".staging"
@@ -1325,6 +1335,21 @@ class CharacterPackageService:
                     "packageSha256": version_record.get("packageSha256"),
                     "diagnostics": [],
                 })
+            installed_ids = {item["id"] for item in characters}
+            for archive_path in sorted(self.bundled_package_root.glob(f"*{CHARACTER_PACKAGE_EXTENSION}")):
+                try:
+                    package = self.validator.validate(archive_path.read_bytes())
+                except PackageValidationError:
+                    continue
+                if package.character_id in installed_ids:
+                    continue
+                manifest = deepcopy(dict(package.manifest))
+                characters.append({"id": package.character_id, "name": manifest.get("name", package.character_id), "version": package.version,
+                    "activeVersion": None, "enabled": False, "installed": False, "source": "bundled", "native": False,
+                    "compatible": True, "versions": [package.version], "manifest": manifest,
+                    "states": sorted(manifest.get("states", {})), "personality": manifest.get("personality"),
+                    "tags": deepcopy(manifest.get("tags", [])), "capabilities": deepcopy(manifest.get("capabilities", [])),
+                    "packageSha256": package.archive_sha256, "diagnostics": []})
             return {
                 "schemaVersion": REGISTRY_SCHEMA_VERSION,
                 "appVersion": self.validator.app_version,
@@ -1338,6 +1363,15 @@ class CharacterPackageService:
         return self.catalog(include_disabled=include_disabled)["characters"]
 
     list = list_packages
+
+    def install_bundled(self, character_id: str, *, expected_revision: str | None = None) -> dict[str, Any]:
+        if not isinstance(character_id, str) or not _ID_PATTERN.fullmatch(character_id):
+            raise PackageNotFoundError("ID bundled invalido.")
+        archive = self.bundled_package_root / f"{character_id}{CHARACTER_PACKAGE_EXTENSION}"
+        try:
+            return self.install(archive.read_bytes(), expected_revision=expected_revision)
+        except FileNotFoundError as error:
+            raise PackageNotFoundError("Pacote bundled nao encontrado.") from error
 
     def install(
         self,

@@ -18,6 +18,7 @@ from codex_usage.behavior_studio import (
     StudioValidationError,
     build_macro_catalog,
 )
+from codex_usage.claude_cli import open_claude_code
 from codex_usage.config import BASE_DIR, load_config, resolve_path
 from codex_usage.character_behaviors import compose_effective_behavior_config
 from codex_usage.character_packages import (
@@ -30,6 +31,7 @@ from codex_usage.character_packages import (
     PackageRevisionError,
     PackageValidationError,
 )
+from codex_usage.providers import build_providers, providers_usage_payload
 from codex_usage.storage import read_json
 from codex_usage.telemetry import build_telemetry
 
@@ -38,6 +40,7 @@ CDP_MONITOR_COMMAND = [sys.executable, "-m", "codex_usage.cdp_monitor"]
 CHARACTER_API = "/api/studio/characters/v1"
 CHARACTER_CATALOG_API = "/api/characters/v1/catalog"
 CHARACTER_ASSET_API = "/api/characters/v1/assets/"
+PROVIDERS_API = "/api/providers"
 
 
 def build_character_catalog(package_service):
@@ -139,6 +142,10 @@ class DashboardHandler(SimpleHTTPRequestHandler):
     @property
     def character_service(self):
         return self.server.character_service
+
+    @property
+    def providers(self):
+        return self.server.providers
 
     def log_message(self, fmt, *args):
         sys.stdout.write("%s - %s\n" % (self.address_string(), fmt % args))
@@ -354,8 +361,17 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 config = self.studio_service.read_config()["config"]
                 usage = read_json(resolve_path(self.app_config, "output_json", "data/codex-usage.json"), {})
                 health = read_json(resolve_path(self.app_config, "health_json", "data/collector-health.json"), {})
+                claude_usage = read_json(resolve_path(self.app_config, "claude_output_json", "data/claude-usage.json"), {})
+                claude_health = read_json(resolve_path(self.app_config, "claude_health_json", "data/claude-health.json"), {})
                 telemetry = build_telemetry(self.app_config)
-                self._send_json({"macros": build_macro_catalog(config, usage=usage, health=health, telemetry=telemetry)})
+                self._send_json({"macros": build_macro_catalog(
+                    config,
+                    usage=usage,
+                    health=health,
+                    telemetry=telemetry,
+                    claude_usage=claude_usage,
+                    claude_health=claude_health,
+                )})
             except Exception as exc:
                 self._send_studio_error(exc)
             return
@@ -369,6 +385,23 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 self._send_studio_error(StudioError(str(exc)))
             except Exception as exc:
                 self._send_studio_error(exc)
+            return
+        if path == PROVIDERS_API:
+            self._send_json({
+                "schema_version": 1,
+                "providers": [provider.describe() for provider in self.providers.values()],
+            })
+            return
+        if path == f"{PROVIDERS_API}/usage":
+            self._send_json(providers_usage_payload(self.providers, self.app_config.get("timezone", "America/Sao_Paulo")))
+            return
+        if path.startswith(f"{PROVIDERS_API}/") and path.endswith("/status"):
+            provider_id = unquote(path[len(PROVIDERS_API) + 1:-len("/status")].strip("/"))
+            provider = self.providers.get(provider_id)
+            if provider is None:
+                self._send_json({"error": "Provedor desconhecido"}, HTTPStatus.NOT_FOUND)
+            else:
+                self._send_json(provider.status())
             return
         if path == "/api/status":
             usage = read_json(resolve_path(self.app_config, "output_json", "data/codex-usage.json"), {})
@@ -417,6 +450,11 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                     self._send_json(self.character_service.restore_natives(expected_revision=self._character_expected_revision()))
                     return
                 relative = path[len(CHARACTER_API):].strip("/")
+                if relative.startswith("bundled/") and relative.endswith("/install"):
+                    character_id = unquote(relative[len("bundled/"):-len("/install")].strip("/"))
+                    self._read_json_body()
+                    self._send_json(self.character_service.install_bundled(character_id, expected_revision=self._character_expected_revision()), HTTPStatus.CREATED)
+                    return
                 character_id, action = [unquote(part) for part in relative.split("/", 1)]
                 if action == "update":
                     archive = self._read_package_body()
@@ -467,6 +505,42 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 self._send_json({"error": "Rota nao encontrada"}, HTTPStatus.NOT_FOUND)
             except Exception as exc:
                 self._send_studio_error(exc)
+            return
+
+        if path.startswith(f"{PROVIDERS_API}/") and path.endswith("/refresh"):
+            if not self._same_origin(loopback_only=False):
+                self._send_json({"error": "Origin nao autorizado"}, HTTPStatus.FORBIDDEN)
+                return
+            provider_id = unquote(path[len(PROVIDERS_API) + 1:-len("/refresh")].strip("/"))
+            provider = self.providers.get(provider_id)
+            if provider is None:
+                self._send_json({"error": "Provedor desconhecido"}, HTTPStatus.NOT_FOUND)
+                return
+            result = provider.refresh()
+            self._send_json(result, HTTPStatus.OK if result.get("ok") else HTTPStatus.CONFLICT)
+            return
+
+        if path == "/api/actions/open-claude-code":
+            # Acao fixa da allowlist local: nenhum comando ou argumento vem do
+            # navegador; o executavel e resolvido exclusivamente no servidor.
+            if not self._require_same_origin():
+                return
+            self._discard_request_body()
+            claude = self.providers.get("claude")
+            probe = claude.run_cli_probe() if claude is not None and claude.enabled else {}
+            cli_path = probe.get("path") if probe.get("found") else None
+            if not cli_path:
+                self._send_json(
+                    {"ok": False, "error": "CLI do Claude Code não detectada nesta máquina."},
+                    HTTPStatus.CONFLICT,
+                )
+                return
+            try:
+                open_claude_code(cli_path)
+            except OSError:
+                self._send_json({"ok": False, "error": "Falha ao iniciar o Claude Code."}, HTTPStatus.INTERNAL_SERVER_ERROR)
+                return
+            self._send_json({"ok": True, "message": "Claude Code iniciado em um novo terminal."})
             return
 
         if path != "/api/refresh":
@@ -579,6 +653,7 @@ def main() -> int:
 
     server = ThreadingHTTPServer((args.host, args.port), DashboardHandler)
     server.app_config = config
+    server.providers = build_providers(config)
     server.studio_service = BehaviorStudioService()
     server.character_service = CharacterPackageService(
         **({"registry_root": args.character_registry_root} if args.character_registry_root else {}),

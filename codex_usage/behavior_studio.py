@@ -454,20 +454,32 @@ def _format_macro_value(value: Any, spec: dict[str, Any]) -> str:
     return str(value)
 
 
+def _claude_window(claude_usage: dict[str, Any], window_id: str) -> dict[str, Any]:
+    for window in claude_usage.get("windows") or []:
+        if isinstance(window, dict) and window.get("id") == window_id:
+            return window
+    return {}
+
+
 def build_macro_catalog(
     config: dict[str, Any],
     *,
     usage: dict[str, Any] | None = None,
     health: dict[str, Any] | None = None,
     telemetry: dict[str, Any] | None = None,
+    claude_usage: dict[str, Any] | None = None,
+    claude_health: dict[str, Any] | None = None,
     panel_idle_seconds: float | None = None,
     now: datetime | None = None,
 ) -> list[dict[str, Any]]:
     usage, health, telemetry = usage or {}, health or {}, telemetry or {}
+    claude_usage, claude_health = claude_usage or {}, claude_health or {}
     now = now or datetime.now(timezone.utc)
     machine, weather, clock = telemetry.get("machine") or {}, telemetry.get("weather") or {}, telemetry.get("clock") or {}
     five_hour = ((usage.get("resets") or {}).get("limite_5h") or {})
     weekly = ((usage.get("resets") or {}).get("limite_semanal") or {})
+    claude_session = _claude_window(claude_usage, "session")
+    claude_weekly = _claude_window(claude_usage, "weekly")
     normalized_context = {
         "clock": {
             "time": clock.get("time") or now.astimezone().strftime("%H:%M:%S"),
@@ -496,6 +508,16 @@ def build_macro_catalog(
         "collection": {
             "status": health.get("status"),
             "collectedAtMs": _timestamp_milliseconds(usage.get("collected_at")),
+        },
+        "claude": {
+            "sessionPercent": claude_session.get("remaining_percent"),
+            "sessionResetSeconds": _seconds_until(claude_session.get("reset_at"), now),
+            "sessionLimitReached": claude_session.get("limit_reached"),
+            "weeklyPercent": claude_weekly.get("remaining_percent"),
+            "weeklyResetSeconds": _seconds_until(claude_weekly.get("reset_at"), now),
+            "weeklyLimitReached": claude_weekly.get("limit_reached"),
+            "status": claude_health.get("status"),
+            "collectedAtMs": _timestamp_milliseconds(claude_usage.get("collected_at")),
         },
     }
     catalog = []

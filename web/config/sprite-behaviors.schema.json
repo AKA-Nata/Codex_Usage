@@ -109,6 +109,12 @@
         "codex_5h_reset",
         "codex_semanal_percentual",
         "codex_semanal_reset",
+        "claude_status",
+        "claude_ultima_atualizacao",
+        "claude_session_percentual",
+        "claude_session_reset",
+        "claude_weekly_percentual",
+        "claude_weekly_reset",
         "coleta_status",
         "ultima_atualizacao"
       ],
@@ -187,6 +193,8 @@
         "maquina",
         "codex_5h",
         "codex_semanal"
+        ,"claude_sessao"
+        ,"claude_semanal"
       ],
       "properties": {
         "hora": {
@@ -206,6 +214,14 @@
         },
         "codex_semanal": {
           "const": "#card-weekly"
+        },
+        "claude_sessao": {
+          "const": "#card-claude-session",
+          "description": "Card dinâmico da janela de sessão do Claude."
+        },
+        "claude_semanal": {
+          "const": "#card-claude-weekly",
+          "description": "Card dinâmico da janela semanal do Claude."
         },
         "status": {
           "type": "string",
@@ -867,6 +883,8 @@
         "maquina",
         "codex_5h",
         "codex_semanal",
+        "claude_sessao",
+        "claude_semanal",
         "status"
       ]
     },

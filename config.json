@@ -1,8 +1,10 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "codex_usage_url": "https://chatgpt.com/codex/cloud/settings/analytics?locale=pt-BR",
   "output_json": "data/codex-usage.json",
   "health_json": "data/collector-health.json",
+  "claude_output_json": "data/claude-usage.json",
+  "claude_health_json": "data/claude-health.json",
   "log_file": "logs/collector.log",
   "timezone": "America/Sao_Paulo",
   "stale_after_minutes": 45,
@@ -13,6 +15,31 @@
     "profile_dir": "runtime/edge-cdp-profile",
     "refresh_minutes": 5,
     "capture_wait_seconds": 20
+  },
+  "providers": {
+    "codex": {
+      "enabled": true,
+      "strategy": "cdp"
+    },
+    "claude": {
+      "enabled": true,
+      "strategy": "auto",
+      "cli": {
+        "path": null,
+        "timeout_seconds": 20
+      },
+      "cdp": {
+        "host": "127.0.0.1",
+        "port": 9223,
+        "profile_dir": "runtime/claude-cdp-profile",
+        "usage_url": "https://claude.ai/settings/usage",
+        "capture_wait_seconds": 20,
+        "timeout_seconds": 45
+      },
+      "api": {
+        "enabled": false
+      }
+    }
   },
   "dashboard": {
     "host": "127.0.0.1",

@@ -37,6 +37,23 @@ def load_config(path: Path | None = None) -> dict[str, Any]:
     if not isinstance(cdp_port, int) or not (1 <= cdp_port <= 65535):
         raise ConfigError("cdp_monitor.port deve estar entre 1 e 65535")
 
+    providers = config.get("providers")
+    if providers is not None:
+        if not isinstance(providers, dict):
+            raise ConfigError("providers deve ser um objeto")
+        claude = providers.get("claude") or {}
+        if not isinstance(claude, dict):
+            raise ConfigError("providers.claude deve ser um objeto")
+        strategy = claude.get("strategy", "auto")
+        if strategy not in ("auto", "cli", "cdp", "api"):
+            raise ConfigError("providers.claude.strategy deve ser auto, cli, cdp ou api")
+        claude_cdp = claude.get("cdp") or {}
+        claude_port = claude_cdp.get("port", 9223)
+        if not isinstance(claude_port, int) or not (1 <= claude_port <= 65535):
+            raise ConfigError("providers.claude.cdp.port deve estar entre 1 e 65535")
+        if claude_port == cdp_port:
+            raise ConfigError("providers.claude.cdp.port deve ser diferente de cdp_monitor.port")
+
     weather = config.get("weather") or {}
     if weather.get("enabled", False):
         latitude = weather.get("latitude")

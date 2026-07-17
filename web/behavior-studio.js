@@ -30,7 +30,7 @@ import { BehaviorStudioCharactersTab } from "./behavior-studio-characters-tab.js
 
 const CHARACTER_LABELS = { auto: "Automático", explorer: "Explorador", wizard: "Mago", mechanic: "Mecânico", orb: "Orbital" };
 const CHARACTER_SELECTOR_LABELS = { auto: "Automático", id: "Personagem por ID", group: "Grupo", tag: "Tag", personality: "Personalidade", capability: "Capacidade" };
-const CARD_LABELS = { hora: "Hora", interacao: "Interação", temperatura: "Temperatura", maquina: "Máquina", codex_5h: "Codex 5h", codex_semanal: "Codex semanal", status: "Coleta" };
+const CARD_LABELS = { hora: "Hora", interacao: "Interação", temperatura: "Temperatura", maquina: "Máquina", codex_5h: "Codex 5h", codex_semanal: "Codex semanal", claude_sessao: "Claude sessão", claude_semanal: "Claude semanal", status: "Coleta" };
 const EVENT_LABELS = {
   user_return: "Retorno do usuário",
   collection_error: "Erro da coleta",
@@ -45,7 +45,7 @@ const CHANGE_LABELS = {
   hora: "Hora", temperatura: "Temperatura", clima: "Clima", cpu: "CPU", ram: "RAM", disco: "Disco",
   gpu: "GPU", gpu_memoria: "Memória GPU", codex_5h_percentual: "Codex 5h %", codex_5h_reset: "Reset 5h",
   codex_5h_atingido: "Limite 5h atingido", codex_semanal_percentual: "Codex semanal %",
-  codex_semanal_reset: "Reset semanal", codex_semanal_atingido: "Limite semanal atingido",
+  codex_semanal_reset: "Reset semanal", codex_semanal_atingido: "Limite semanal atingido", claude_session_percentual: "Claude sessão %", claude_session_reset: "Claude sessão reset", claude_session_limite_atingido: "Claude sessão atingida", claude_weekly_percentual: "Claude semanal %", claude_weekly_reset: "Claude semanal reset", claude_weekly_limite_atingido: "Claude semanal atingida",
   tempo_sem_interacao: "Inatividade", coleta_status: "Estado da coleta",
 };
 

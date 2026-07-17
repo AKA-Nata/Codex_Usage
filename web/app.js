@@ -2,6 +2,7 @@ import { SpriteReactionEngine, loadSpriteBehaviorConfig } from "./sprite-reactio
 import { createBehaviorStudio } from "./behavior-studio.js";
 import { CharacterRegistry, NATIVE_CHARACTER_IDS } from "./character-registry.js";
 import { SpriteAnimationEngine } from "./sprite-animation-engine.js";
+import { refreshProviderCountdowns, renderProviderCards } from "./provider-cards.js";
 
 const STORAGE_KEY = "codex-pulse-design-v2";
 const DESIGN_SCHEMA_VERSION = 3;
@@ -36,6 +37,7 @@ const templates = {
 const state = {
   usage: null,
   health: null,
+  providers: null,
   telemetry: null,
   settings: { stale_after_minutes: 45, auto_refresh_seconds: 60, telemetry_refresh_seconds: 5 },
   statusTimer: null,
@@ -195,17 +197,6 @@ function setStudio(open) {
   byId("studio").setAttribute("aria-hidden", String(!open));
 }
 
-function renderCard(kind, data) {
-  const suffix = kind === "5h" ? "5h" : "Weekly";
-  const percent = safePercent(data?.remaining_percent);
-  const reset = parseDate(data?.reset_at);
-  byId(`percent${suffix}`).textContent = `${percent ?? "--"}%`;
-  byId(`fill${suffix}`).style.width = `${percent ?? 0}%`;
-  byId(`countdown${suffix}`).dataset.resetAt = data?.reset_at || "";
-  byId(`countdown${suffix}`).textContent = countdown(reset);
-  byId(`exact${suffix}`).textContent = exactDate(reset);
-}
-
 function setNotice(message, level = "") {
   const element = byId("notice");
   element.textContent = message || "";
@@ -215,8 +206,11 @@ function setNotice(message, level = "") {
 function renderStatus() {
   const usage = state.usage || {};
   const health = state.health || {};
-  renderCard("5h", usage.resets?.limite_5h);
-  renderCard("weekly", usage.resets?.limite_semanal);
+  renderProviderCards(byId("providerCards"), state.providers || { providers: { codex: {
+    provider: "codex", label: "OpenAI Codex", state: health.status === "ok" ? "ok" : "unavailable",
+    source: usage.extraction_mode, collected_at: usage.collected_at,
+    windows: [usage.resets?.limite_5h && { id: "5h", label: "Limite de uso de 5 horas", ...usage.resets.limite_5h }, usage.resets?.limite_semanal && { id: "weekly", label: "Limite de uso semanal", ...usage.resets.limite_semanal }].filter(Boolean),
+  } } });
 
   byId("collectedAt").textContent = usage.collected_at
     ? `Atualizado ${new Date(usage.collected_at).toLocaleString("pt-BR")}`
@@ -270,6 +264,7 @@ function currentSpriteContext() {
   return {
     usage: state.usage || {},
     health: state.health || {},
+    providers: state.providers || {},
     telemetry: state.telemetry || {},
     settings: state.settings,
     panelIdleSeconds: Math.floor((Date.now() - state.lastHumanInteractionAt) / 1000),
@@ -329,9 +324,15 @@ function handleTelemetryError(error) {
 }
 
 async function loadStatus() {
-  const response = await fetch(`/api/status?t=${Date.now()}`, { cache: "no-store" });
+  const [response, providersResponse] = await Promise.all([
+    fetch(`/api/status?t=${Date.now()}`, { cache: "no-store" }),
+    fetch(`/api/providers/usage?t=${Date.now()}`, { cache: "no-store" }),
+  ]);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const payload = await response.json();
+  state.providers = providersResponse.ok ? await providersResponse.json() : null;
+  const claude = state.providers?.providers?.claude;
+  byId("openClaudeCode").hidden = !claude?.cli?.found;
   state.usage = payload.usage || {};
   state.health = payload.health || {};
   state.settings = { ...state.settings, ...(payload.settings || {}) };
@@ -374,7 +375,7 @@ async function refreshNow() {
     state.statusError = response.ok ? "" : payload.message || payload.error || "A coleta não foi concluída.";
     renderStatus();
     ingestSpriteContext();
-    await loadTelemetry().catch(handleTelemetryError);
+    await Promise.all([loadStatus(), loadTelemetry().catch(handleTelemetryError)]);
     if (!response.ok) setNotice(payload.message || payload.error || "A coleta não foi concluída.", "warn");
   } catch (error) {
     state.statusError = error.message;
@@ -398,10 +399,7 @@ function tickUi() {
   byId("dateValue").textContent = now.toLocaleDateString("pt-BR");
   byId("idleValue").textContent = formatIdle((Date.now() - state.lastHumanInteractionAt) / 1000);
 
-  ["countdown5h", "countdownWeekly"].forEach(id => {
-    const element = byId(id);
-    element.textContent = countdown(parseDate(element.dataset.resetAt));
-  });
+  refreshProviderCountdowns();
 }
 
 function bindEvents() {
@@ -410,6 +408,11 @@ function bindEvents() {
   byId("closeStudioBottom").addEventListener("click", () => setStudio(false));
   byId("studioBackdrop").addEventListener("click", () => setStudio(false));
   byId("refreshButton").addEventListener("click", refreshNow);
+  byId("openClaudeCode").addEventListener("click", async () => {
+    const response = await fetch("/api/actions/open-claude-code", { method: "POST", credentials: "same-origin" });
+    const payload = await response.json();
+    setNotice(payload.message || payload.error || "Ação do Claude Code concluída.", response.ok ? "" : "warn");
+  });
 
   document.querySelectorAll("[data-template]").forEach(button => button.addEventListener("click", () => updateDesign({ template: button.dataset.template, ...templates[button.dataset.template] })));
   byId("spriteCharacterOptions").addEventListener("click", event => {

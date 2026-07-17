@@ -7,6 +7,9 @@ runtime/
 logs/
 data/codex-usage.json
 data/collector-health.json
+data/claude-usage.json
+data/claude-health.json
+data/claude-cli-probe.json
 
 *.har
 *.log

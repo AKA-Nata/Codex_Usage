@@ -228,6 +228,7 @@ export class BehaviorStudioCharactersTab {
       validate: `${base}/validate`,
       install: `${base}/install`,
       restoreNatives: `${base}/restore-natives`,
+      installBundled: `${base}/bundled/${encodeURIComponent(characterId)}/install`,
       export: `${base}${identifier}/export`,
       enable: `${base}${identifier}/enable`,
       disable: `${base}${identifier}/disable`,
@@ -313,7 +314,7 @@ export class BehaviorStudioCharactersTab {
       const haystack = [character.id, character.name, character.author, personalityLabel(character.personality), ...character.tags, ...character.capabilities]
         .join(" ").toLocaleLowerCase("pt-BR");
       if (query && !haystack.includes(query)) return false;
-      if (this.sourceFilter !== "all" && (this.sourceFilter === "native") !== character.native) return false;
+      if (this.sourceFilter !== "all" && character.source !== this.sourceFilter) return false;
       if (this.statusFilter === "enabled" && !character.enabled) return false;
       if (this.statusFilter === "disabled" && character.enabled) return false;
       if (this.statusFilter === "update" && character.updateAvailable !== true) return false;
@@ -345,6 +346,7 @@ export class BehaviorStudioCharactersTab {
               <select class="behavior-select" aria-label="Filtrar por origem" data-character-control="source">
                 ${optionHtml("all", this.sourceFilter, "Todas as origens")}
                 ${optionHtml("native", this.sourceFilter, "Nativos")}
+                ${optionHtml("bundled", this.sourceFilter, "Bundled")}
                 ${optionHtml("installed", this.sourceFilter, "Instalados")}
               </select>
               <select class="behavior-select" aria-label="Filtrar por estado" data-character-control="status">
@@ -389,7 +391,7 @@ export class BehaviorStudioCharactersTab {
           data-character-action="select" data-character-id="${escapeHtml(character.id)}">
           <b>${escapeHtml(character.name)}</b>
           <small>${escapeHtml(character.id)} · ${escapeHtml(character.version)} · ${escapeHtml(status)}</small>
-          <span class="behavior-chip${character.native ? "" : " ok"}">${character.native ? "nativo" : "instalado"}</span>
+          <span class="behavior-chip${character.native ? "" : " ok"}">${escapeHtml(character.source || (character.native ? "native" : "installed"))}</span>
           ${character.updateAvailable === true ? `<span class="behavior-chip warn">atualização</span>` : ""}
           ${character.valid ? "" : `<span class="behavior-chip error">diagnóstico</span>`}
         </button>`;
@@ -442,7 +444,7 @@ export class BehaviorStudioCharactersTab {
         <h4>Identidade e compatibilidade</h4>
         <div class="behavior-grid">
           <div class="behavior-field span-3"><span>Versão</span><strong>${escapeHtml(character.version)}</strong></div>
-          <div class="behavior-field span-3"><span>Origem</span><strong>${character.native ? "Nativo" : "Pacote instalado"}</strong></div>
+          <div class="behavior-field span-3"><span>Origem</span><strong>${escapeHtml(character.source || (character.native ? "native" : "installed"))}</strong></div>
           <div class="behavior-field span-6"><span>Compatibilidade</span><strong>${escapeHtml(compatibilityLabel(character))}</strong></div>
           <div class="behavior-field span-6"><span>Personalidade</span><strong>${escapeHtml(personalityLabel(character.personality))}</strong></div>
           <div class="behavior-field span-3"><span>Estados</span><strong>${character.states.length}</strong></div>
@@ -457,7 +459,7 @@ export class BehaviorStudioCharactersTab {
         <div data-character-diagnostics>${this.diagnosticsHtml(character)}</div>
       </div>
       <div class="behavior-editor-actions">
-        ${character.native ? "" : `<button class="button danger" type="button" data-character-action="remove"${character.inUse ? ` title="O backend verificará as referências em uso"` : ""}>Remover</button>`}
+        ${character.source === "bundled" ? `<button class="button primary" type="button" data-character-action="install-bundled">Instalar bundled</button>` : character.native ? "" : `<button class="button danger" type="button" data-character-action="remove"${character.inUse ? ` title="O backend verificará as referências em uso"` : ""}>Remover</button>`}
         <button class="button" type="button" data-character-action="export">Exportar pacote</button>
         <button class="button" type="button" data-character-action="toggle">${character.enabled ? "Desativar" : "Ativar"}</button>
         <button class="button" type="button" data-character-action="update"${updateReady ? "" : " disabled"} title="Selecione e valide uma versão mais nova deste personagem">Atualizar com pacote validado</button>
@@ -588,6 +590,7 @@ export class BehaviorStudioCharactersTab {
       else if (action === "choose-file") this.root.querySelector('[data-character-control="package-file"]')?.click();
       else if (action === "validate-package") await this.validatePackage();
       else if (action === "install-package") await this.installPackage();
+      else if (action === "install-bundled") await this.installBundled();
       else if (action === "export") await this.exportSelected();
       else if (action === "toggle") await this.toggleSelected();
       else if (action === "update") await this.updateSelected();
@@ -701,6 +704,20 @@ export class BehaviorStudioCharactersTab {
     } finally {
       this.setBusy(false);
     }
+  }
+
+  async installBundled() {
+    const character = this.selectedCharacter;
+    if (!character || character.source !== "bundled") return;
+    this.setBusy(true); this.setStatus(`Instalando ${character.name}…`);
+    try {
+      const result = await this.json(this.endpoint("installBundled", character.id), { method: "POST", headers: this.mutationHeaders({ "Content-Type": "application/json" }), body: "{}" });
+      this.selectedId = character.id;
+      await this.refresh();
+      this.setStatus(`${character.name} instalado e ativado.`, "ok");
+      this.afterAction("install-bundled", result, character);
+      return result;
+    } finally { this.setBusy(false); }
   }
 
   async postSelected(action, body = {}) {

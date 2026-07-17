@@ -148,6 +148,10 @@ export function normalizeSpriteData(raw = {}, now = Date.now(), thresholdValues 
   const clock = telemetry.clock || {};
   const fiveHour = usage.resets?.limite_5h || {};
   const weekly = usage.resets?.limite_semanal || {};
+  const claudeProvider = raw.providers?.providers?.claude || raw.providers?.claude || {};
+  const claudeWindows = Array.isArray(claudeProvider.windows) ? claudeProvider.windows : [];
+  const claudeSession = claudeWindows.find(item => item?.id === "session") || {};
+  const claudeWeekly = claudeWindows.find(item => item?.id === "weekly") || {};
   const settingsStale = finiteNumber(raw.settings?.stale_after_minutes);
   const staleAfterMinutes = settingsStale === null
     ? thresholds.staleAfterMinutes
@@ -166,6 +170,9 @@ export function normalizeSpriteData(raw = {}, now = Date.now(), thresholdValues 
   const weeklyResetAtMs = timestampMs(weekly.reset_at);
   const fiveHourPercent = finitePercent(fiveHour.remaining_percent);
   const weeklyPercent = finitePercent(weekly.remaining_percent);
+  const claudeCollectedAtMs = timestampMs(claudeProvider.collected_at);
+  const claudeSessionPercent = finitePercent(claudeSession.remaining_percent);
+  const claudeWeeklyPercent = finitePercent(claudeWeekly.remaining_percent);
   const panelIdleSeconds = nonNegativeNumber(raw.panelIdleSeconds ?? raw.idleSeconds);
   const systemIdleSeconds = nonNegativeNumber(machine.system_idle_seconds);
   const globalLimitReached = usage.limit_reached === true || usage.allowed === false;
@@ -192,6 +199,16 @@ export function normalizeSpriteData(raw = {}, now = Date.now(), thresholdValues 
       fiveHourLimitReached,
       weeklyLimitReached,
       limitReached: globalLimitReached,
+    },
+    claude: {
+      status: normalizeStatus(claudeProvider.state),
+      collectedAtMs: claudeCollectedAtMs,
+      sessionPercent: claudeSessionPercent,
+      weeklyPercent: claudeWeeklyPercent,
+      sessionResetSeconds: secondsUntil(timestampMs(claudeSession.reset_at), claudeSession.reset_after_seconds, now, claudeCollectedAtMs),
+      weeklyResetSeconds: secondsUntil(timestampMs(claudeWeekly.reset_at), claudeWeekly.reset_after_seconds, now, claudeCollectedAtMs),
+      sessionLimitReached: claudeSession.limit_reached === true || claudeSessionPercent === 0,
+      weeklyLimitReached: claudeWeekly.limit_reached === true || claudeWeeklyPercent === 0,
     },
     machine: {
       status: normalizeStatus(machine.status),
@@ -386,6 +403,8 @@ const REQUIRED_BEHAVIOR_CARDS = Object.freeze([
   "maquina",
   "codex_5h",
   "codex_semanal",
+  "claude_sessao",
+  "claude_semanal",
 ]);
 
 const REQUIRED_BEHAVIOR_CARD_SELECTORS = Object.freeze({
@@ -395,6 +414,8 @@ const REQUIRED_BEHAVIOR_CARD_SELECTORS = Object.freeze({
   maquina: "#card-machine",
   codex_5h: "#card-five-hour",
   codex_semanal: "#card-weekly",
+  claude_sessao: "#card-claude-session",
+  claude_semanal: "#card-claude-weekly",
 });
 
 const SPRITE_MACRO_TYPES = Object.freeze(["string", "number", "boolean", "datetime", "duration"]);
@@ -414,6 +435,12 @@ const REQUIRED_BEHAVIOR_MACROS = Object.freeze([
   "codex_5h_reset",
   "codex_semanal_percentual",
   "codex_semanal_reset",
+  "claude_status",
+  "claude_ultima_atualizacao",
+  "claude_session_percentual",
+  "claude_session_reset",
+  "claude_weekly_percentual",
+  "claude_weekly_reset",
   "coleta_status",
   "ultima_atualizacao",
 ]);
@@ -433,6 +460,14 @@ const DEFAULT_MACRO_SPECS = Object.freeze({
   codex_5h_reset: { token: "{{codex_5h_reset}}", sourcePath: "codex.fiveHourResetSeconds", type: "duration", unit: "s", fallback: "reset de 5h indisponível" },
   codex_semanal_percentual: { token: "{{codex_semanal_percentual}}", sourcePath: "codex.weeklyPercent", type: "number", unit: "%", fallback: "limite semanal indisponível" },
   codex_semanal_reset: { token: "{{codex_semanal_reset}}", sourcePath: "codex.weeklyResetSeconds", type: "duration", unit: "s", fallback: "reset semanal indisponível" },
+  claude_status: { token: "{{claude_status}}", sourcePath: "claude.status", type: "string", unit: "", fallback: "indisponível" },
+  claude_ultima_atualizacao: { token: "{{claude_ultima_atualizacao}}", sourcePath: "claude.collectedAtMs", type: "datetime", unit: "", fallback: "atualização indisponível" },
+  claude_session_percentual: { token: "{{claude_session_percentual}}", sourcePath: "claude.sessionPercent", type: "number", unit: "%", fallback: "sessão indisponível" },
+  claude_session_reset: { token: "{{claude_session_reset}}", sourcePath: "claude.sessionResetSeconds", type: "duration", unit: "s", fallback: "reset indisponível" },
+  claude_session_limite_atingido: { token: "{{claude_session_limite_atingido}}", sourcePath: "claude.sessionLimitReached", type: "boolean", unit: "", fallback: false },
+  claude_weekly_percentual: { token: "{{claude_weekly_percentual}}", sourcePath: "claude.weeklyPercent", type: "number", unit: "%", fallback: "semanal indisponível" },
+  claude_weekly_reset: { token: "{{claude_weekly_reset}}", sourcePath: "claude.weeklyResetSeconds", type: "duration", unit: "s", fallback: "reset indisponível" },
+  claude_weekly_limite_atingido: { token: "{{claude_weekly_limite_atingido}}", sourcePath: "claude.weeklyLimitReached", type: "boolean", unit: "", fallback: false },
   coleta_status: { token: "{{coleta_status}}", sourcePath: "collection.status", type: "string", unit: "", fallback: "status indisponível" },
   ultima_atualizacao: { token: "{{ultima_atualizacao}}", sourcePath: "collection.collectedAtMs", type: "datetime", unit: "", fallback: "atualização indisponível" },
 });

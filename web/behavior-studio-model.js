@@ -7,7 +7,7 @@ import {
 import { normalizeCharacterSelector } from "./character-selector.js";
 
 
-export const STUDIO_CARDS = Object.freeze(["hora", "interacao", "temperatura", "maquina", "codex_5h", "codex_semanal", "status"]);
+export const STUDIO_CARDS = Object.freeze(["hora", "interacao", "temperatura", "maquina", "codex_5h", "codex_semanal", "claude_sessao", "claude_semanal", "status"]);
 export const STUDIO_CHARACTERS = Object.freeze(["auto", "explorer", "wizard", "mechanic", "orb"]);
 export const STUDIO_CHARACTER_SELECTOR_KINDS = Object.freeze(["auto", "id", "group", "tag", "personality", "capability"]);
 export const STUDIO_STATES = Object.freeze(["idle", "walk", "inspect", "point", "talk", "happy", "worried", "critical", "hot", "cold", "sleep", "wake", "confused", "celebrate"]);
@@ -28,6 +28,12 @@ export const STUDIO_CHANGE_FIELDS = Object.freeze({
   codex_semanal_percentual: { input: "weeklyPercent", type: "number" },
   codex_semanal_reset: { input: "weeklyResetSeconds", type: "number" },
   codex_semanal_atingido: { input: "weeklyLimitReached", type: "boolean" },
+  claude_session_percentual: { input: "claudeSessionPercent", type: "number" },
+  claude_session_reset: { input: "claudeSessionResetSeconds", type: "number" },
+  claude_session_limite_atingido: { input: "claudeSessionLimitReached", type: "boolean" },
+  claude_weekly_percentual: { input: "claudeWeeklyPercent", type: "number" },
+  claude_weekly_reset: { input: "claudeWeeklyResetSeconds", type: "number" },
+  claude_weekly_limite_atingido: { input: "claudeWeeklyLimitReached", type: "boolean" },
   tempo_sem_interacao: { input: "idleSeconds", type: "number" },
   coleta_status: { input: "collectionState", type: "string" },
 });
@@ -315,6 +321,13 @@ export function buildStudioSimulationInput(values = {}, now = Date.now()) {
       status: collectionState === "error" ? "error" : "ok",
       message: collectionState === "error" ? "Falha simulada da coleta" : "Simulação local",
     },
+    providers: { providers: { claude: {
+      state: values.claudeStatus || "ok", collected_at: collectedAt,
+      windows: [
+        { id: "session", remaining_percent: values.claudeSessionPercent ?? 70, reset_at: values.claudeSessionResetAt || isoAtOffset(now, values.claudeSessionResetSeconds ?? 7200), limit_reached: Boolean(values.claudeSessionLimitReached) },
+        { id: "weekly", remaining_percent: values.claudeWeeklyPercent ?? 70, reset_at: values.claudeWeeklyResetAt || isoAtOffset(now, values.claudeWeeklyResetSeconds ?? 86400), limit_reached: Boolean(values.claudeWeeklyLimitReached) },
+      ],
+    } } },
     telemetry: {
       generated_at: observed.toISOString(),
       clock: { time, date, iso: observed.toISOString() },
